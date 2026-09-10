@@ -138,6 +138,11 @@ Cada jugador ve su propia animacion, con su propio ritmo, independiente de los d
 - Un GIF que declara un retardo invalido o de cero usa 10 fps por defecto.
 - La animacion es en bucle infinito, incluso si el GIF declara un numero limitado de
   repeticiones.
+- **WEBP animado**: se reproduce a 10 fps fijos (100 ms por frame). La libreria que lo
+  decodifica lee todos los frames pero no expone sus retardos (verificado en F0, ver
+  seccion 3.4). Como el tope del plugin ya es 10 fps, la diferencia frente al retardo real
+  es inapreciable en la mayoria de archivos. Leer la duracion a mano del chunk `ANMF` queda
+  como mejora futura, no se implementa ahora.
 
 ### 4.3 Mapa en mano
 
