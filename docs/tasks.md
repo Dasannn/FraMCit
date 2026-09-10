@@ -122,22 +122,22 @@ Rama: `feat/f3-imagen` - Worktree: `../framcit-f3-imagen`
 
 Rama: `feat/f4-mapa-estatico` - Worktree: `../framcit-f4-mapa-estatico`
 
-- [ ] **F4.1** `ImageService`: une comando, cola, descarga, decodificacion y conversion.
-- [ ] **F4.2** Salto explicito de vuelta al hilo principal al terminar el trabajo asincrono.
-- [ ] **F4.3** Crear el `MapView` y asignarle `FraMCitRenderer` en su version estatica.
-- [ ] **F4.4** Construir el item: nombre desde el archivo o el dominio, lore con origen,
+- [x] **F4.1** `ImageService`: une comando, cola, descarga, decodificacion y conversion.
+- [x] **F4.2** Salto explicito de vuelta al hilo principal al terminar el trabajo asincrono.
+- [x] **F4.3** Crear el `MapView` y asignarle `FraMCitRenderer` en su version estatica.
+- [x] **F4.4** Construir el item: nombre desde el archivo o el dominio, lore con origen,
       autor y fecha.
-- [ ] **F4.5** Marca interna en el item y en el mapa que identifica a FraMCit.
-- [ ] **F4.6** Entrega al inventario; si esta lleno, soltar al suelo y avisar por chat.
-- [ ] **F4.7** Cancelar la entrega si el jugador se desconecto durante la descarga.
-- [ ] **F4.8** `Messages` con todos los textos del spec 9, en espanol.
-- [ ] **F4.9** Mensaje inmediato de "Descargando imagen..." al ejecutar el comando.
-- [ ] **F4.10** Mensaje final que distingue imagen estatica de GIF y dice cuantos frames tiene.
-- [ ] **F4.11** [SEC] Log obligatorio: jugador, UUID, URL completa, tamano, formato, id de
+- [x] **F4.5** Marca interna en el item y en el mapa que identifica a FraMCit.
+- [x] **F4.6** Entrega al inventario; si esta lleno, soltar al suelo y avisar por chat.
+- [x] **F4.7** Cancelar la entrega si el jugador se desconecto durante la descarga.
+- [x] **F4.8** `Messages` con todos los textos del spec 9, en espanol.
+- [x] **F4.9** Mensaje inmediato de "Descargando imagen..." al ejecutar el comando.
+- [x] **F4.10** Mensaje final que distingue imagen estatica de GIF y dice cuantos frames tiene.
+- [x] **F4.11** [SEC] Log obligatorio: jugador, UUID, URL completa, tamano, formato, id de
       mapa.
-- [ ] **F4.12** Comprobacion de permiso y rechazo de ejecucion desde consola.
-- [ ] **F4.13** Que ningun mensaje al jugador filtre rutas, IPs internas ni trazas.
-- [ ] **F4.14** Prueba manual: provocar cada error del spec 9 uno a uno y comprobar el texto.
+- [x] **F4.12** Comprobacion de permiso y rechazo de ejecucion desde consola.
+- [x] **F4.13** Que ningun mensaje al jugador filtre rutas, IPs internas ni trazas.
+- [x] **F4.14** Prueba manual: provocar cada error del spec 9 uno a uno y comprobar el texto.
 
 **Fase terminada cuando**: criterio de aceptacion 1 cumplido y la tabla de mensajes del spec
 9 verificada entera.
