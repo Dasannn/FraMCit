@@ -93,26 +93,26 @@ menos un test que la cubre.
 
 Rama: `feat/f3-imagen` - Worktree: `../framcit-f3-imagen`
 
-- [ ] **F3.1** `FormatSniffer` por magic bytes: PNG, JPEG, BMP, GIF, WEBP. Nada de fiarse de
+- [x] **F3.1** `FormatSniffer` por magic bytes: PNG, JPEG, BMP, GIF, WEBP. Nada de fiarse de
       la extension ni del `Content-Type`.
-- [ ] **F3.2** Registrar el reader de TwelveMonkeys al arrancar el plugin.
-- [ ] **F3.3** `ImageDecoder` para imagenes estaticas.
-- [ ] **F3.4** `ImageDecoder` para GIF animado: frames y retardo de cada uno, resolviendo los
+- [x] **F3.2** Registrar el reader de TwelveMonkeys al arrancar el plugin.
+- [x] **F3.3** `ImageDecoder` para imagenes estaticas.
+- [x] **F3.4** `ImageDecoder` para GIF animado: frames y retardo de cada uno, resolviendo los
       modos de composicion del GIF (frames parciales sobre el anterior).
-- [ ] **F3.5** WEBP animado segun el resultado de F0.
-- [ ] **F3.6** [SEC] Comprobar dimensiones y numero de frames **antes** de decodificar
+- [x] **F3.5** WEBP animado segun el resultado de F0.
+- [x] **F3.6** [SEC] Comprobar dimensiones y numero de frames **antes** de decodificar
       entero, leyendo solo la cabecera.
-- [ ] **F3.7** Normalizar retardos: minimo segun el tope de fps, valor por defecto si el GIF
+- [x] **F3.7** Normalizar retardos: minimo segun el tope de fps, valor por defecto si el GIF
       declara cero o basura.
-- [ ] **F3.8** `MapConverter`: escalar manteniendo proporcion, centrar en 128x128, rellenar
+- [x] **F3.8** `MapConverter`: escalar manteniendo proporcion, centrar en 128x128, rellenar
       con transparente.
-- [ ] **F3.9** `MapConverter`: conversion a paleta de mapa conservando la transparencia total.
-- [ ] **F3.10** Test: imagen ancha, alta y cuadrada. Sin deformacion, centrada.
-- [ ] **F3.11** Test: PNG con transparencia, que se mantiene transparente.
-- [ ] **F3.12** Test: PNG renombrado a `.jpg` se detecta como PNG.
-- [ ] **F3.13** Test: GIF de 101 frames rechazado, de 100 aceptado.
-- [ ] **F3.14** Test: imagen de 5000x5000 rechazada por cabecera, sin decodificarla.
-- [ ] **F3.15** Volcar una conversion a PNG desde un test para revisarla a ojo.
+- [x] **F3.9** `MapConverter`: conversion a paleta de mapa conservando la transparencia total.
+- [x] **F3.10** Test: imagen ancha, alta y cuadrada. Sin deformacion, centrada.
+- [x] **F3.11** Test: PNG con transparencia, que se mantiene transparente.
+- [x] **F3.12** Test: PNG renombrado a `.jpg` se detecta como PNG.
+- [x] **F3.13** Test: GIF de 101 frames rechazado, de 100 aceptado.
+- [x] **F3.14** Test: imagen de 5000x5000 rechazada por cabecera, sin decodificarla.
+- [x] **F3.15** Volcar una conversion a PNG desde un test para revisarla a ojo.
 
 **Fase terminada cuando**: los tests pasan y la imagen volcada se ve bien.
 
