@@ -1,0 +1,98 @@
+# Constitution
+
+Principios no negociables del proyecto. Cualquier decision de spec, arquitectura o
+implementacion que contradiga este documento se rechaza, o se cambia este documento
+primero con aprobacion explicita del owner.
+
+## 1. Identidad del proyecto
+
+**FraMCit** (paquete `com.dasannn.framcit`): plugin de Paper que permite a un jugador
+convertir una URL de imagen o GIF en un mapa de Minecraft colocable en un item frame. GIFs animados solo se animan para el jugador
+que esta mirando el marco.
+
+Owner y unica autoridad de producto: el propietario del repositorio.
+
+## 2. Plataforma objetivo (fija)
+
+- Servidor: **Paper 26.2** (verificado 2026-09-10 contra la API de PaperMC: canal
+  STABLE, build 123).
+- Runtime: **Java 25** (requisito oficial de Paper 26.1+).
+- API: Paper API. No Spigot-only, no Bukkit legacy.
+- No se usa NMS ni reflexion contra clases internas del servidor. Si una funcionalidad
+  solo es posible con NMS, se documenta y se pide aprobacion antes de implementarla.
+- No hay soporte multi-version. Una sola version objetivo.
+
+## 3. Alcance
+
+Un solo spec por ahora: el plugin de imagenes en marcos.
+
+Dentro del alcance:
+- Comando que entrega al jugador un item mapa con la imagen de una URL.
+- Soporte de imagenes estaticas y de GIF animado.
+- Animacion de GIF unicamente para jugadores que miran el marco.
+- Persistencia: las imagenes sobreviven al reinicio del servidor.
+
+Fuera del alcance (requiere aprobacion nueva para entrar):
+- Busqueda de imagenes por palabras clave / integracion con APIs de Google u otras.
+- Mosaicos multi-marco (imagenes de mas de un mapa).
+- Audio, musica o cualquier funcionalidad de sonido.
+- Interfaz web, panel de administracion, base de datos externa.
+
+## 4. Principios de producto
+
+1. **Un comando, un resultado.** El jugador pega un link y recibe un mapa. Sin menus,
+   sin GUIs, sin pasos intermedios.
+2. **Acceso abierto.** Cualquier jugador puede usar el comando. Sin cooldown, sin lista
+   blanca de dominios, sin limite de mapas por jugador. Decision explicita del owner.
+3. **Lo que cuelgas sigue colgado.** Una imagen colocada en un marco funciona tras
+   reiniciar el servidor, indefinidamente, sin intervencion manual.
+4. **Fallar en voz alta.** Si una URL no sirve, el jugador recibe un mensaje claro en
+   chat que dice por que. Nunca un mapa en blanco sin explicacion.
+
+## 5. Principios tecnicos
+
+1. **El servidor nunca se bloquea.** Toda operacion de red y de decodificacion de
+   imagen ocurre fuera del hilo principal. Ninguna descarga, ningun decode, ningun I/O
+   de disco en el main thread. Un TPS caido por este plugin es un bug de severidad alta.
+2. **Ancho de banda proporcional a la atencion.** Solo se envian frames de mapa a los
+   jugadores que realmente estan mirando el marco. Un GIF que nadie mira no consume red.
+3. **Minimo indispensable.** Sin abstracciones especulativas, sin capas de servicios sin
+   uso, sin dependencias nuevas para lo que resuelven la stdlib de Java o la Paper API.
+4. **Sin estado invisible.** El estado persistido vive en la carpeta de datos del plugin,
+   en formato legible o inspeccionable, y su formato se documenta.
+5. **El plugin se puede desinstalar.** Quitar el jar no corrompe el mundo. Los mapas
+   quedan en blanco, nada mas.
+
+## 6. Piso de seguridad (no negociable)
+
+El owner decidio acceso abierto para los jugadores. Eso NO elimina estas protecciones,
+porque no limitan a un jugador legitimo y sin ellas cualquier jugador puede usar el
+servidor como arma:
+
+1. Solo esquemas `http` y `https`. Nada de `file:`, `ftp:`, `jar:`, ni otros.
+2. Bloqueo de destinos internos: loopback, link-local, y rangos privados
+   (10/8, 172.16/12, 192.168/16, y equivalentes IPv6). Se valida la IP resuelta, no
+   solo el texto del host, y se re-valida en cada redireccion.
+3. Limite duro de bytes descargados, aplicado durante el stream, no confiando en el
+   header `Content-Length`.
+4. Timeout de conexion y de lectura.
+5. Limite de redirecciones seguidas.
+6. Limite de dimensiones y de numero de frames de GIF antes de decodificar, para evitar
+   agotar memoria con una imagen manipulada (decompression bomb).
+
+Los valores concretos de cada limite se definen en spec.md. Que existan, no.
+
+## 7. Contenido de terceros
+
+El plugin no modera el contenido de las URLs. La responsabilidad del contenido publicado
+es del jugador que ejecuta el comando y del staff del servidor. El plugin registra en log
+quien cargo que URL y cuando, para que el staff pueda actuar. Ese log es un requisito, no
+una funcionalidad opcional.
+
+## 8. Reglas de proceso
+
+- La documentacion se escribe antes que el codigo: constitution, spec, ARCHITECTURE,
+  plan, tasks. En ese orden, con aprobacion en cada etapa.
+- No se implementa nada que no este documentado.
+- No se trabaja en `main` ni se hacen merges a `main` sin instruccion explicita.
+- Cambios de arquitectura o de requisitos requieren aprobacion antes de ejecutarse.
