@@ -148,27 +148,27 @@ Rama: `feat/f4-mapa-estatico` - Worktree: `../framcit-f4-mapa-estatico`
 
 Rama: `feat/f5-persistencia` - Worktree: `../framcit-f5-persistencia`
 
-- [ ] **F5.1** Formato `.fmc`: cabecera con magia, version de formato y numero de frames,
+- [x] **F5.1** Formato `.fmc`: cabecera con magia, version de formato y numero de frames,
       seguida de los frames en crudo.
-- [ ] **F5.2** Escritura a archivo temporal y renombrado atomico, para no dejar archivos a
+- [x] **F5.2** Escritura a archivo temporal y renombrado atomico, para no dejar archivos a
       medias.
-- [ ] **F5.3** `index.json`: id de mapa, URL original, URL normalizada, autor, fecha, formato,
+- [x] **F5.3** `index.json`: id de mapa, URL original, URL normalizada, autor, fecha, formato,
       frames, retardos.
-- [ ] **F5.4** Normalizacion de URL para la clave de cache (host en minusculas, barra final).
-- [ ] **F5.5** Acierto de cache: segunda peticion de la misma URL, sin descarga.
-- [ ] **F5.6** Al arrancar: leer el indice y re-vincular el renderer a cada `MapView`,
+- [x] **F5.4** Normalizacion de URL para la clave de cache (host en minusculas, barra final).
+- [x] **F5.5** Acierto de cache: segunda peticion de la misma URL, sin descarga.
+- [x] **F5.6** Al arrancar: leer el indice y re-vincular el renderer a cada `MapView`,
       quitando antes los renderers que traiga.
-- [ ] **F5.7** Ids de mapa que ya no existen: registrar y marcar como huerfanos, sin abortar.
-- [ ] **F5.8** Indice corrupto: renombrar a `.bak`, avisar en el log, arrancar vacio. Nunca
+- [x] **F5.7** Ids de mapa que ya no existen: registrar y marcar como huerfanos, sin abortar.
+- [x] **F5.8** Indice corrupto: renombrar a `.bak`, avisar en el log, arrancar vacio. Nunca
       impedir el arranque del servidor.
-- [ ] **F5.9** `.fmc` ausente o corrupto: ese mapa en blanco, log, y el resto sigue.
-- [ ] **F5.10** Cache LRU en memoria acotado en MB, con carga perezosa desde disco fuera del
+- [x] **F5.9** `.fmc` ausente o corrupto: ese mapa en blanco, log, y el resto sigue.
+- [x] **F5.10** Cache LRU en memoria acotado en MB, con carga perezosa desde disco fuera del
       hilo principal.
-- [ ] **F5.11** Volcado del indice al apagar y tras cada cambio.
-- [ ] **F5.12** Prueba manual: reiniciar el servidor y comprobar que los cuadros siguen
+- [x] **F5.11** Volcado del indice al apagar y tras cada cambio.
+- [x] **F5.12** Prueba manual: reiniciar el servidor y comprobar que los cuadros siguen
       iguales.
-- [ ] **F5.13** Prueba manual: borrar un `.fmc` a mano y comprobar que solo ese mapa se rompe.
-- [ ] **F5.14** El `.fmc` guarda bytes de paleta de mapa, que dependen de una API marcada
+- [x] **F5.13** Prueba manual: borrar un `.fmc` a mano y comprobar que solo ese mapa se rompe.
+- [x] **F5.14** El `.fmc` guarda bytes de paleta de mapa, que dependen de una API marcada
       para eliminacion (R7). Dejar constancia en la cabecera del formato de con que version
       de paleta se escribio, y mantener el acceso a esa API acotado a `MapConverter` y
       `FraMCitRenderer`, para que el dia que Paper la elimine solo haya que tocar esos dos
