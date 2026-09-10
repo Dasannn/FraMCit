@@ -128,4 +128,8 @@ public class DownloadQueue implements AutoCloseable {
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         return executor.awaitTermination(timeout, unit);
     }
+
+    public ThreadPoolExecutor getExecutor() {
+        return executor;
+    }
 }
