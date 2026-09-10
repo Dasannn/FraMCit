@@ -168,6 +168,11 @@ Rama: `feat/f5-persistencia` - Worktree: `../framcit-f5-persistencia`
 - [ ] **F5.12** Prueba manual: reiniciar el servidor y comprobar que los cuadros siguen
       iguales.
 - [ ] **F5.13** Prueba manual: borrar un `.fmc` a mano y comprobar que solo ese mapa se rompe.
+- [ ] **F5.14** El `.fmc` guarda bytes de paleta de mapa, que dependen de una API marcada
+      para eliminacion (R7). Dejar constancia en la cabecera del formato de con que version
+      de paleta se escribio, y mantener el acceso a esa API acotado a `MapConverter` y
+      `FraMCitRenderer`, para que el dia que Paper la elimine solo haya que tocar esos dos
+      sitios y migrar los archivos por su version.
 
 **Fase terminada cuando**: criterios de aceptacion 4 y 8 cumplidos.
 

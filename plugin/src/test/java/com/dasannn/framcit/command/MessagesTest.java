@@ -28,7 +28,6 @@ class MessagesTest {
         assertEquals("Ese enlace no apunta a una imagen.", Messages.ERROR_NOT_AN_IMAGE);
         assertEquals("Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP.", Messages.ERROR_UNSUPPORTED_FORMAT);
         assertEquals("Ese archivo esta danado y no se pudo leer.", Messages.ERROR_CORRUPTED_FILE);
-        assertEquals("Aviso: este WEBP animado se coloco como imagen fija.", Messages.ERROR_WEBP_ANIMATED_UNSUPPORTED);
         assertEquals("Ese GIF tiene demasiados frames (limite: 100).", Messages.ERROR_TOO_MANY_FRAMES);
         assertEquals("Esa imagen es demasiado grande (limite: 4096x4096).", Messages.ERROR_DIMENSIONS_TOO_LARGE);
 
@@ -36,6 +35,6 @@ class MessagesTest {
         assertEquals("El sitio respondio con error (404). El enlace puede haber caducado.", Messages.httpError(404));
         assertEquals("El sitio respondio con error (500). El enlace puede haber caducado.", Messages.httpError(500));
         assertEquals("El sitio respondio con error. El enlace puede haber caducado.", Messages.genericHttpError());
-        assertEquals("GIF cargado (12 frames). Se muestra el primer frame como imagen fija.", Messages.gifSuccess(12));
+        assertEquals("Imagen animada cargada (12 frames). Se muestra el primer frame como imagen fija.", Messages.animatedSuccess(12));
     }
 }

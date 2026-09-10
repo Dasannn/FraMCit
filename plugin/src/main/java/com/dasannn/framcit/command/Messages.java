@@ -29,7 +29,6 @@ public final class Messages {
     public static final String ERROR_NOT_AN_IMAGE = "Ese enlace no apunta a una imagen.";
     public static final String ERROR_UNSUPPORTED_FORMAT = "Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP.";
     public static final String ERROR_CORRUPTED_FILE = "Ese archivo esta danado y no se pudo leer.";
-    public static final String ERROR_WEBP_ANIMATED_UNSUPPORTED = "Aviso: este WEBP animado se coloco como imagen fija.";
     public static final String ERROR_TOO_MANY_FRAMES = "Ese GIF tiene demasiados frames (limite: 100).";
     public static final String ERROR_DIMENSIONS_TOO_LARGE = "Esa imagen es demasiado grande (limite: 4096x4096).";
 
@@ -44,7 +43,11 @@ public final class Messages {
         return "El sitio respondio con error. El enlace puede haber caducado.";
     }
 
-    public static String gifSuccess(int frameCount) {
-        return "GIF cargado (" + frameCount + " frames). Se muestra el primer frame como imagen fija.";
+    /**
+     * Confirmacion para cualquier imagen animada (GIF o WEBP).
+     * En F4 todavia no hay animacion: se muestra el primer frame. F6 la activa.
+     */
+    public static String animatedSuccess(int frameCount) {
+        return "Imagen animada cargada (" + frameCount + " frames). Se muestra el primer frame como imagen fija.";
     }
 }

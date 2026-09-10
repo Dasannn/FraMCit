@@ -130,10 +130,8 @@ public final class ImageCommand {
             }
 
             // F4.10: Mensaje final segun formato y numero de frames
-            if (success.image().getFormat() == ImageFormat.WEBP && success.image().isAnimated()) {
-                player.sendMessage(Component.text(Messages.ERROR_WEBP_ANIMATED_UNSUPPORTED));
-            } else if (success.image().isAnimated()) {
-                player.sendMessage(Component.text(Messages.gifSuccess(success.image().getFrameCount())));
+            if (success.image().isAnimated()) {
+                player.sendMessage(Component.text(Messages.animatedSuccess(success.image().getFrameCount())));
             } else {
                 player.sendMessage(Component.text(Messages.STATIC_SUCCESS));
             }

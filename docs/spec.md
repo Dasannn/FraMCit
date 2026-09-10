@@ -234,7 +234,6 @@ Todos en espanol. Cada fallo dice que paso, no solo que fallo:
 | No es imagen | Ese enlace no apunta a una imagen. |
 | Formato no soportado | Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP. |
 | Archivo corrupto | Ese archivo esta danado y no se pudo leer. |
-| WEBP animado sin soporte | Aviso: este WEBP animado se coloco como imagen fija. |
 | GIF con demasiados frames | Ese GIF tiene demasiados frames (limite: 100). |
 | Dimensiones excesivas | Esa imagen es demasiado grande (limite: 4096x4096). |
 | Cola llena | Hay varias descargas en curso, espera un momento. |
