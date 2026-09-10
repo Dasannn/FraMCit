@@ -182,24 +182,24 @@ Rama: `feat/f5-persistencia` - Worktree: `../framcit-f5-persistencia`
 
 Rama: `feat/f6-animacion` - Worktree: `../framcit-f6-animacion`
 
-- [ ] **F6.1** `FraMCitRenderer` contextual, con indice de frame propio por jugador.
-- [ ] **F6.2** Volcado del frame al canvas como copia de memoria, sin trabajo de conversion
+- [x] **F6.1** `FraMCitRenderer` contextual, con indice de frame propio por jugador.
+- [x] **F6.2** Volcado del frame al canvas como copia de memoria, sin trabajo de conversion
       en el render.
-- [ ] **F6.3** `GazeTracker`: raytrace desde los ojos cada 5 ticks, un rayo por jugador.
-- [ ] **F6.4** Detectar `ItemFrame` con mapa de FraMCit, y que ningun bloque solido se
+- [x] **F6.3** `GazeTracker`: raytrace desde los ojos cada 5 ticks, un rayo por jugador.
+- [x] **F6.4** Detectar `ItemFrame` con mapa de FraMCit, y que ningun bloque solido se
       interponga.
-- [ ] **F6.5** Estado por par (jugador, mapa): mirando o no, indice de frame, reloj propio.
-- [ ] **F6.6** `AnimationScheduler` cada tick: avanzar solo los pares que tocan y llamar a
+- [x] **F6.5** Estado por par (jugador, mapa): mirando o no, indice de frame, reloj propio.
+- [x] **F6.6** `AnimationScheduler` cada tick: avanzar solo los pares que tocan y llamar a
       `sendMap` solo a ese jugador.
-- [ ] **F6.7** Respetar el retardo de cada frame con el tope de fps.
-- [ ] **F6.8** Congelar al apartar la vista y reanudar en el mismo frame.
-- [ ] **F6.9** Bucle infinito, ignorando el numero de repeticiones que declare el GIF.
-- [ ] **F6.10** Animar tambien el mapa sostenido en la mano principal.
-- [ ] **F6.11** Limpiar el estado al desconectarse un jugador, al descargarse el chunk y al
+- [x] **F6.7** Respetar el retardo de cada frame con el tope de fps.
+- [x] **F6.8** Congelar al apartar la vista y reanudar en el mismo frame.
+- [x] **F6.9** Bucle infinito, ignorando el numero de repeticiones que declare el GIF.
+- [x] **F6.10** Animar tambien el mapa sostenido en la mano principal.
+- [x] **F6.11** Limpiar el estado al desconectarse un jugador, al descargarse el chunk y al
       romperse el marco. Sin fugas de memoria.
-- [ ] **F6.12** Una excepcion en el ciclo desactiva solo ese mapa, nunca el ciclo entero.
-- [ ] **F6.13** Prueba manual con dos clientes: animacion independiente para cada uno.
-- [ ] **F6.14** Prueba manual: apartar la vista congela; volver a mirar sigue donde estaba.
+- [x] **F6.12** Una excepcion en el ciclo desactiva solo ese mapa, nunca el ciclo entero.
+- [x] **F6.13** Prueba manual con dos clientes: animacion independiente para cada uno.
+- [x] **F6.14** Prueba manual: apartar la vista congela; volver a mirar sigue donde estaba.
 
 **Fase terminada cuando**: criterios de aceptacion 2 y 3 cumplidos con dos clientes a la vez.
 

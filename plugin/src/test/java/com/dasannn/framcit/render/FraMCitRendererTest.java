@@ -13,8 +13,10 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.Image;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +42,20 @@ class FraMCitRendererTest {
         @Override public void setCursors(MapCursorCollection cursors) {}
         @Override public void drawImage(int x, int y, Image image) {}
         @Override public void drawText(int x, int y, MapFont font, String text) {}
+    }
+
+    private Player createMockPlayer(UUID uuid, String name) {
+        return (Player) Proxy.newProxyInstance(
+            Player.class.getClassLoader(),
+            new Class<?>[]{ Player.class },
+            (proxy, method, args) -> {
+                String mName = method.getName();
+                if ("getUniqueId".equals(mName)) return uuid;
+                if ("getName".equals(mName)) return name;
+                if ("isOnline".equals(mName)) return true;
+                return null;
+            }
+        );
     }
 
     @Test
@@ -69,23 +85,69 @@ class FraMCitRendererTest {
     }
 
     @Test
-    @DisplayName("F4.3 - Modo contextual preparado para F6")
-    void testContextualMode() {
-        byte[] frameBytes = new byte[16384];
-        Arrays.fill(frameBytes, (byte) 10);
-        ConvertedFrame frame = new ConvertedFrame(frameBytes, 100);
-        ConvertedImage image = new ConvertedImage(ImageFormat.GIF, List.of(frame));
+    @DisplayName("F6.1 - Dos jugadores sobre el mismo mapa contextual ven sus frames independientes")
+    void testIndependentFramesPerPlayer() {
+        byte[] frame0Bytes = new byte[16384];
+        Arrays.fill(frame0Bytes, (byte) 11);
+        byte[] frame1Bytes = new byte[16384];
+        Arrays.fill(frame1Bytes, (byte) 22);
 
-        FraMCitRenderer contextualRenderer = new FraMCitRenderer(image, true);
-        assertTrue(contextualRenderer.isContextual());
+        ConvertedFrame frame0 = new ConvertedFrame(frame0Bytes, 100);
+        ConvertedFrame frame1 = new ConvertedFrame(frame1Bytes, 100);
+        ConvertedImage image = new ConvertedImage(ImageFormat.GIF, List.of(frame0, frame1));
 
-        StubMapCanvas canvas = new StubMapCanvas();
-        contextualRenderer.render(null, canvas, null);
-        assertEquals(16384, canvas.setPixelCalls);
+        FraMCitRenderer renderer = new FraMCitRenderer(image, true);
+        assertTrue(renderer.isContextual());
+
+        Player player1 = createMockPlayer(UUID.randomUUID(), "Player1");
+        Player player2 = createMockPlayer(UUID.randomUUID(), "Player2");
+
+        // Configurar frame distinto por jugador
+        renderer.setPlayerFrame(player1, 0);
+        renderer.setPlayerFrame(player2, 1);
+
+        StubMapCanvas canvas1 = new StubMapCanvas();
+        renderer.render(null, canvas1, player1);
+        assertEquals(11, canvas1.getPixel(0, 0));
+        assertEquals(11, canvas1.getPixel(100, 100));
+
+        StubMapCanvas canvas2 = new StubMapCanvas();
+        renderer.render(null, canvas2, player2);
+        assertEquals(22, canvas2.getPixel(0, 0));
+        assertEquals(22, canvas2.getPixel(100, 100));
     }
 
     @Test
-    @DisplayName("F4.3 - drawFrame con indices fuera de rango usa frame 0 con seguridad")
+    @DisplayName("F6.1 - FraMCitRenderer usa FrameProvider global o inyectado")
+    void testFrameProviderIntegration() {
+        byte[] frame0Bytes = new byte[16384];
+        Arrays.fill(frame0Bytes, (byte) 1);
+        byte[] frame1Bytes = new byte[16384];
+        Arrays.fill(frame1Bytes, (byte) 2);
+
+        ConvertedImage image = new ConvertedImage(ImageFormat.GIF, List.of(
+            new ConvertedFrame(frame0Bytes, 100),
+            new ConvertedFrame(frame1Bytes, 100)
+        ));
+
+        Player player = createMockPlayer(UUID.randomUUID(), "PlayerTest");
+
+        // Con FrameProvider inyectado
+        FraMCitRenderer renderer = new FraMCitRenderer(
+            10,
+            null,
+            image,
+            true,
+            (p, mapId) -> 1
+        );
+
+        StubMapCanvas canvas = new StubMapCanvas();
+        renderer.render(null, canvas, player);
+        assertEquals(2, canvas.getPixel(0, 0));
+    }
+
+    @Test
+    @DisplayName("F6.2 - drawFrame con indices fuera de rango usa frame 0 con seguridad")
     void testDrawFrameBounds() {
         byte[] frameBytes = new byte[16384];
         Arrays.fill(frameBytes, (byte) 7);
