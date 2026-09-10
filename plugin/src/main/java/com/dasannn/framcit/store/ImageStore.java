@@ -104,8 +104,11 @@ public class ImageStore {
                     mapView.removeRenderer(r);
                 }
 
-                // Asignar FraMCitRenderer con carga perezosa desde disco fuera del hilo principal
-                mapView.addRenderer(new FraMCitRenderer(mapId, this));
+                // F6.10: Los mapas animados necesitan renderer contextual.
+                // Como index.json ya guarda frameCount, se decide al arrancar sin leer el .fmc.
+                // Los estáticos se mantienen NO contextuales para ahorrar canvas por jugador.
+                boolean contextual = entry.getFrameCount() > 1;
+                mapView.addRenderer(new FraMCitRenderer(mapId, this, null, contextual));
                 mapView.setTrackingPosition(false);
                 mapView.setUnlimitedTracking(false);
 

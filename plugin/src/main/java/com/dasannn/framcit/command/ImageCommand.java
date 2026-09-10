@@ -147,7 +147,8 @@ public final class ImageCommand {
             for (MapRenderer r : mapView.getRenderers()) {
                 mapView.removeRenderer(r);
             }
-            mapView.addRenderer(new FraMCitRenderer(cached.getMapId(), imageStore));
+            boolean contextual = cached.getFrameCount() > 1;
+            mapView.addRenderer(new FraMCitRenderer(cached.getMapId(), imageStore, null, contextual));
             mapView.setTrackingPosition(false);
             mapView.setUnlimitedTracking(false);
         }
@@ -227,7 +228,8 @@ public final class ImageCommand {
                 mapView.removeRenderer(r);
             }
             int mapId = mapView.getId();
-            mapView.addRenderer(new FraMCitRenderer(mapId, imageStore, success.image()));
+            boolean contextual = success.image().isAnimated();
+            mapView.addRenderer(new FraMCitRenderer(mapId, imageStore, success.image(), contextual));
             mapView.setTrackingPosition(false);
             mapView.setUnlimitedTracking(false);
 

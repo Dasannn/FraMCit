@@ -8,19 +8,40 @@ import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Renderer de mapas para FraMCit (F4.3, F5.6, F5.10).
- * Soporta renderizado estático y carga perezosa desde ImageStore fuera del hilo principal.
- * Mientras la imagen no está cargada en memoria, no bloquea el hilo principal y conserva
- * el contenido previo del canvas.
+ * Renderer de mapas para FraMCit (F4.3, F5.6, F5.10, F6.1, F6.2).
+ * Soporta renderizado estático y contextual con índice de frame por jugador.
+ *
+ * El volcado al canvas es una copia directa de memoria de los bytes ya convertidos:
+ * no decodifica, no escala y no convierte color en el hilo principal (F6.2).
  */
 public class FraMCitRenderer extends MapRenderer {
+
+    @FunctionalInterface
+    public interface FrameProvider {
+        int getFrameIndex(Player player, int mapId);
+    }
+
+    private static volatile FrameProvider globalFrameProvider;
+
+    public static void setGlobalFrameProvider(FrameProvider provider) {
+        globalFrameProvider = provider;
+    }
+
+    public static FrameProvider getGlobalFrameProvider() {
+        return globalFrameProvider;
+    }
 
     private final ImageStore imageStore;
     private final int mapId;
     private final ConvertedImage directImage;
+    private final FrameProvider frameProvider;
+    private final Map<UUID, Integer> localPlayerFrames = new ConcurrentHashMap<>();
     private boolean staticRendered = false;
 
     /**
@@ -34,31 +55,39 @@ public class FraMCitRenderer extends MapRenderer {
      * Constructor contextual con imagen directa en memoria (compatibilidad F4).
      */
     public FraMCitRenderer(ConvertedImage image, boolean contextual) {
-        super(contextual);
-        this.directImage = Objects.requireNonNull(image, "image cannot be null");
-        this.imageStore = null;
-        this.mapId = -1;
+        this(-1, null, Objects.requireNonNull(image, "image cannot be null"), contextual, null);
     }
 
     /**
      * Constructor con carga perezosa desde ImageStore (F5.6, F5.10).
      */
     public FraMCitRenderer(int mapId, ImageStore imageStore) {
-        this(mapId, imageStore, null, false);
+        this(mapId, imageStore, null, false, null);
     }
 
     /**
      * Constructor con carga perezosa e imagen inicial ya disponible en memoria (F5.5).
      */
     public FraMCitRenderer(int mapId, ImageStore imageStore, ConvertedImage initialImage) {
-        this(mapId, imageStore, initialImage, false);
+        this(mapId, imageStore, initialImage, false, null);
     }
 
     public FraMCitRenderer(int mapId, ImageStore imageStore, ConvertedImage initialImage, boolean contextual) {
+        this(mapId, imageStore, initialImage, contextual, null);
+    }
+
+    public FraMCitRenderer(
+        int mapId,
+        ImageStore imageStore,
+        ConvertedImage initialImage,
+        boolean contextual,
+        FrameProvider frameProvider
+    ) {
         super(contextual);
         this.mapId = mapId;
         this.imageStore = imageStore;
         this.directImage = initialImage;
+        this.frameProvider = frameProvider;
     }
 
     public ConvertedImage getImage() {
@@ -73,6 +102,16 @@ public class FraMCitRenderer extends MapRenderer {
         return staticRendered;
     }
 
+    public void setPlayerFrame(Player player, int frameIndex) {
+        if (player != null) {
+            localPlayerFrames.put(player.getUniqueId(), frameIndex);
+        }
+    }
+
+    public int getPlayerFrame(Player player) {
+        return resolveFrameIndex(player);
+    }
+
     @Override
     public void render(MapView map, MapCanvas canvas, Player player) {
         if (!isContextual()) {
@@ -81,11 +120,9 @@ public class FraMCitRenderer extends MapRenderer {
             }
             ConvertedImage img = resolveImage();
             if (img == null) {
-                // Si aún no está en cache, solicitar carga asíncrona fuera del hilo principal
                 if (imageStore != null && mapId >= 0) {
                     imageStore.requestLoadAsync(mapId);
                 }
-                // Mientras no esté cargado, el mapa conserva el frame anterior / en blanco
                 return;
             }
             drawFrame(canvas, 0, img);
@@ -93,13 +130,48 @@ public class FraMCitRenderer extends MapRenderer {
             return;
         }
 
-        // Preparado para F6: modo contextual
-        ConvertedImage img = resolveImage();
-        if (img != null) {
-            drawFrame(canvas, 0, img);
-        } else if (imageStore != null && mapId >= 0) {
-            imageStore.requestLoadAsync(mapId);
+        // Modo contextual (F6.1, F6.2)
+        if (isMapDisabled()) {
+            return;
         }
+
+        ConvertedImage img = resolveImage();
+        if (img == null) {
+            if (imageStore != null && mapId >= 0) {
+                imageStore.requestLoadAsync(mapId);
+            }
+            return;
+        }
+
+        int frameIndex = resolveFrameIndex(player);
+        try {
+            drawFrame(canvas, frameIndex, img);
+        } catch (Throwable t) {
+            // F6.12: Desactivar este mapa en caso de excepción sin afectar a los demás
+            if (globalFrameProvider instanceof AnimationManager am && mapId >= 0) {
+                am.disableMap(mapId, t);
+            }
+        }
+    }
+
+    private boolean isMapDisabled() {
+        if (mapId >= 0 && globalFrameProvider instanceof AnimationManager am) {
+            return am.isMapDisabled(mapId);
+        }
+        return false;
+    }
+
+    private int resolveFrameIndex(Player player) {
+        if (player == null) {
+            return 0;
+        }
+        if (frameProvider != null) {
+            return frameProvider.getFrameIndex(player, mapId);
+        }
+        if (globalFrameProvider != null) {
+            return globalFrameProvider.getFrameIndex(player, mapId);
+        }
+        return localPlayerFrames.getOrDefault(player.getUniqueId(), 0);
     }
 
     /**
@@ -126,7 +198,8 @@ public class FraMCitRenderer extends MapRenderer {
     }
 
     /**
-     * Vuelca los 16384 bytes del frame especificado de una imagen al MapCanvas.
+     * Vuelca los 16384 bytes del frame especificado de una imagen al MapCanvas (F6.2).
+     * Copia pura de memoria, sin transformaciones ni decodificación.
      */
     @SuppressWarnings("deprecation")
     public void drawFrame(MapCanvas canvas, int frameIndex, ConvertedImage img) {
