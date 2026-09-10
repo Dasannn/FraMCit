@@ -248,6 +248,13 @@ Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
       justo despues de arrancar, y un jugador usando `/imagen` en ese momento. Si estorba,
       separar la E/S de disco en su propio pool: es rapida y local, y no deberia competir
       con la red, que es lenta y remota.
+- [ ] **F8.11** Medir el coste por tick del `AnimationScheduler`, que recorre **todos** los
+      estados (jugador, mapa), no solo los activos. El estado de un par se conserva a
+      proposito cuando el jugador aparta la vista, porque el spec 4.1 exige reanudar en el
+      mismo frame, asi que el total crece con los mapas que cada jugador ha mirado durante
+      su sesion. Como mucho hay un mapa animado por jugador, asi que si la medicion lo pide
+      basta con llevar aparte el conjunto de estados activos y recorrer solo ese: pasa de
+      escalar con "mapas mirados" a escalar con "jugadores conectados".
 - [ ] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Conectar a la IP que ya valido
       `UrlGuard` en lugar de al nombre, conservando la cabecera `Host` y el SNI para que
       TLS siga verificando el certificado contra el dominio real. Aplica tambien a cada
@@ -289,7 +296,7 @@ que lo impide.
 | F5 persistencia | 13 | F4 |
 | F6 animacion | 14 | F5 |
 | F7 config y admin | 10 | F6 |
-| F8 rendimiento | 10 | F7 |
+| F8 rendimiento | 11 | F7 |
 | F9 Aternos | 6 | F8 |
 
-Total: 110 tareas.
+Total: 111 tareas.
