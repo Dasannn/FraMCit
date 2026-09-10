@@ -92,13 +92,27 @@ externa, empaquetada dentro del jar.
 - Aporta soporte de lectura de WEBP. No se usa para escribir.
 - Los mismos limites de la seccion 5 aplican a los WEBP.
 
-**Riesgo abierto R1**: el soporte de WEBP *animado* de esta libreria debe verificarse con
-archivos reales antes de darlo por hecho. Si resulta que solo lee el primer frame, un WEBP
-animado se tratara como imagen estatica (mostrando ese primer frame) en lugar de fallar.
-La verificacion es una tarea explicita del plan.
+**Riesgo R1 cerrado: SÍ lee todos los frames** (verificado el 2026-09-10 en la fase F0).
+La libreria `com.twelvemonkeys.imageio:imageio-webp:3.15.0` decodifica con exito la totalidad
+de los frames de archivos WEBP animados reales mediante `reader.read(i)`.
 
-Se anaden dos mensajes de error para este formato: WEBP corrupto y WEBP animado tratado
-como estatico (aviso, no error).
+Evidencia empirica (comparada contra `webpinfo` 1.4.0 oficial de Google y Python Pillow):
+1. `animated_1_google.webp` (Google / Mathias Bynens): 12 de 12 frames leidos (100%).
+2. `chromium_animated_large.webp` (Proyecto Chromium): 8 de 8 frames leidos (100%).
+3. `mozilla_blend.webp` (Proyecto Mozilla Gecko): 2 de 2 frames leidos (100%).
+4. `static_google.webp` (Google WebP Gallery): 1 de 1 frame leido (control estatico).
+
+**Retardos entre frames**: la libreria **no expone los retardos** a traves de la API estandar
+de `ImageIO` (`reader.getStreamMetadata()` devuelve `null` y `reader.getImageMetadata(i)`
+solo expone el esquema estandar `javax_imageio_1.0` sin campos de animacion ni duracion).
+Internamente la clase privada `AnimationFrame` almacena el valor `duration`, pero no se
+expone al exterior.
+
+**Propuesta de retardo por defecto**:
+Al igual que con los GIFs que declaran retardo invalido o cero (seccion 4.2), los WEBP
+animados usaran por defecto **10 fps (100 ms por frame / 2 ticks de Minecraft)**, salvo que
+en F3 se decida extraer la duracion directamente leyendo los 3 bytes de duration del chunk
+`ANMF` (offset 20 en cada chunk ANMF, formato little-endian de 24 bits).
 
 ## 4. GIFs animados
 

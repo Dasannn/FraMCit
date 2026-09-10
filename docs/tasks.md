@@ -23,14 +23,13 @@ Rigen sobre este documento: `docs/constitution.md`, `docs/spec.md`, `ARCHITECTUR
 Rama: `feat/f0-spike-webp` - Worktree: `../framcit-f0-spike-webp`
 Independiente. Puede correr en paralelo con F1.
 
-- [ ] **F0.1** Proyecto Java suelto (fuera del plugin) con TwelveMonkeys
+- [x] **F0.1** Proyecto Java suelto (fuera del plugin) con TwelveMonkeys
       `imageio-webp:3.15.0` e `imageio-core` como unicas dependencias.
-- [ ] **F0.2** Reunir tres WEBP animados reales de origen distinto y un WEBP estatico.
-- [ ] **F0.3** Leer cada uno con `ImageIO` y contar frames y retardos que devuelve el reader.
-- [ ] **F0.4** Anotar el resultado en `docs/spec.md` seccion 3.4, cerrando **R1** con un si
+- [x] **F0.2** Reunir tres WEBP animados reales de origen distinto y un WEBP estatico.
+- [x] **F0.3** Leer cada uno con `ImageIO` y contar frames y retardos que devuelve el reader.
+- [x] **F0.4** Anotar el resultado en `docs/spec.md` seccion 3.4, cerrando **R1** con un si
       o un no.
-- [ ] **F0.5** Si solo lee el primer frame: dejar escrito en el spec que un WEBP animado se
-      trata como estatico con aviso, y confirmar que el mensaje del spec 9 lo cubre.
+- [-] **F0.5** No aplica: TwelveMonkeys lee todos los frames (verificado en F0.3 y cerrado en F0.4).
 
 **Fase terminada cuando**: R1 esta cerrado en el spec con evidencia, no con suposicion.
 
