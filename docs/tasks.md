@@ -215,6 +215,9 @@ Rama: `feat/f7-config-admin` - Worktree: `../framcit-f7-config-admin`
 - [ ] **F7.7** `/imagen purgar <url|id>`: borra del cache y del disco, con confirmacion.
 - [ ] **F7.8** `/imagen listar [pagina]` paginado.
 - [ ] **F7.9** Autocompletado de los subcomandos.
+- [ ] **F7.10** [SEC] Al arrancar, leer el TTL de cache de DNS efectivo de la JVM y avisar
+      en el log si esta desactivado (`0`). Con la cache desactivada, la proteccion de
+      `UrlGuard` es vulnerable al reenlace de DNS (R6, constitution 6.1).
 
 **Fase terminada cuando**: cambiar un limite y recargar surte efecto sin reiniciar, y
 `/imagen info` responde correctamente.
@@ -233,6 +236,12 @@ Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 - [ ] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista.
 - [ ] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion.
 - [ ] **F8.8** Anotar los numeros medidos en el informe de la fase.
+- [ ] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Conectar a la IP que ya valido
+      `UrlGuard` en lugar de al nombre, conservando la cabecera `Host` y el SNI para que
+      TLS siga verificando el certificado contra el dominio real. Aplica tambien a cada
+      salto de redireccion. Alternativa si resulta inviable: dejar por escrito que se
+      acepta el riesgo, con el motivo. **No se puede pasar a F9 sin resolver esta tarea de
+      una de las dos formas** (constitution 6.1).
 
 **Fase terminada cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con numeros escritos.
 
@@ -267,8 +276,8 @@ que lo impide.
 | F4 estatico | 14 | F2, F3 |
 | F5 persistencia | 13 | F4 |
 | F6 animacion | 14 | F5 |
-| F7 config y admin | 9 | F6 |
-| F8 rendimiento | 8 | F7 |
+| F7 config y admin | 10 | F6 |
+| F8 rendimiento | 9 | F7 |
 | F9 Aternos | 6 | F8 |
 
-Total: 106 tareas.
+Total: 108 tareas.

@@ -248,8 +248,9 @@ Sin framework de test para lo trivial. Dos niveles:
 
 | Id | Riesgo | Plan |
 |---|---|---|
-| R1 | TwelveMonkeys puede no leer WEBP animado | Verificar con archivos reales antes de implementar. Si no lee, tratarlo como estatico con aviso (spec 3.4) |
+| R1 | ~~TwelveMonkeys puede no leer WEBP animado~~ **Cerrado en F0**: los lee todos, pero no expone los retardos. WEBP animado va a 10 fps fijos (spec 3.4 y 4.2) | - |
 | R2 | Los ids de mapa de un mundo son finitos | El cache por URL ya evita el derroche. `/imagen listar` y `/imagen purgar` dan control al staff |
 | R3 | `sendMap` envia el mapa entero | Acotado por diseno: un mapa animado por jugador (seccion 5.1). Palanca: bajar fps |
 | R4 | El raytrace puede no alcanzar marcos en chunks lejanos | Rango por defecto 24 bloques, dentro del rango de entidades cargadas |
 | R5 | Un cambio de API entre builds de Paper 26.2 | Solo API publica, sin NMS: el riesgo es bajo. La version exacta de la API queda fijada en el build |
+| **R6** | **Reenlace de DNS**: `HttpClient` resuelve el nombre otra vez al conectar, asi que la conexion puede acabar en una IP que `UrlGuard` nunca valido | Hoy lo tapa la cache de DNS de la JVM, que no es garantia de diseno. Aviso al arrancar si la cache esta desactivada (F7.10) y fijado de IP pendiente (F8.9). Ver constitution 6.1 |

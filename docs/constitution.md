@@ -82,6 +82,27 @@ servidor como arma:
 
 Los valores concretos de cada limite se definen en spec.md. Que existan, no.
 
+### 6.1 Limitacion conocida: reenlace de DNS (R6)
+
+El punto 2 exige validar la IP resuelta. La implementacion de F2 lo cumple, pero queda una
+grieta inherente a como funciona `HttpClient`: el DNS se resuelve **dos veces**, una al
+validar y otra al conectar. Entre ambas, un atacante que controle el DNS de su propio
+dominio puede cambiar la respuesta y hacer que la conexion acabe en una IP interna que la
+validacion nunca vio. Es el bypass clasico de esta clase de proteccion.
+
+Hoy lo tapa la cache de DNS de la JVM (30 segundos por defecto para respuestas positivas),
+que hace que las dos resoluciones devuelvan lo mismo. Eso es una casualidad afortunada del
+entorno, **no una garantia del diseno**: arrancar el servidor con
+`-Dsun.net.inetaddr.ttl=0` reabre la ventana por completo.
+
+Obligaciones que esto impone, y que no son negociables:
+
+1. El plugin comprueba al arrancar el TTL de cache de DNS efectivo y **avisa en el log** si
+   la cache esta desactivada.
+2. La unica solucion completa es conectar a la IP ya validada en lugar de al nombre
+   (fijando la IP y conservando el `Host` y el SNI). Queda pendiente, y debe estar resuelto
+   o aceptado por escrito antes de que el plugin corra en un servidor publico.
+
 ## 7. Contenido de terceros
 
 El plugin no modera el contenido de las URLs. La responsabilidad del contenido publicado
