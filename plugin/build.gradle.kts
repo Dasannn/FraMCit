@@ -24,6 +24,13 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.123-stable")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.0")
     implementation("com.twelvemonkeys.imageio:imageio-core:3.15.0")
+
+    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.shadowJar {

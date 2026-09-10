@@ -64,25 +64,25 @@ con el plugin sin avisos en consola, y `/imagen hola` responde en el chat.
 
 Rama: `feat/f2-seguridad-red` - Worktree: `../framcit-f2-seguridad-red`
 
-- [ ] **F2.1** [SEC] `UrlGuard`: aceptar solo `http` y `https`, rechazar todo lo demas.
-- [ ] **F2.2** [SEC] `UrlGuard`: resolver el host a IP y rechazar loopback, link-local,
+- [x] **F2.1** [SEC] `UrlGuard`: aceptar solo `http` y `https`, rechazar todo lo demas.
+- [x] **F2.2** [SEC] `UrlGuard`: resolver el host a IP y rechazar loopback, link-local,
       privadas y cualquier destino no publico, en IPv4 e IPv6.
-- [ ] **F2.3** [SEC] Redirecciones seguidas a mano, revalidando el destino en **cada** salto,
+- [x] **F2.3** [SEC] Redirecciones seguidas a mano, revalidando el destino en **cada** salto,
       con el limite configurado.
-- [ ] **F2.4** `Downloader` con `java.net.http.HttpClient`: timeout de conexion y de lectura.
-- [ ] **F2.5** [SEC] Corte por bytes durante el stream, sin confiar en `Content-Length`.
-- [ ] **F2.6** `DownloadQueue`: executor de 4 hilos, cola acotada, rechazo limpio cuando esta
+- [x] **F2.4** `Downloader` con `java.net.http.HttpClient`: timeout de conexion y de lectura.
+- [x] **F2.5** [SEC] Corte por bytes durante el stream, sin confiar en `Content-Length`.
+- [x] **F2.6** `DownloadQueue`: executor de 4 hilos, cola acotada, rechazo limpio cuando esta
       llena.
-- [ ] **F2.7** Tipo de resultado que lleva el fallo como valor (no como excepcion suelta)
+- [x] **F2.7** Tipo de resultado que lleva el fallo como valor (no como excepcion suelta)
       hasta el comando.
-- [ ] **F2.8** [SEC] Test: `127.0.0.1`, `localhost`, `10.0.0.1`, `192.168.1.1`,
+- [x] **F2.8** [SEC] Test: `127.0.0.1`, `localhost`, `10.0.0.1`, `192.168.1.1`,
       `172.16.0.1`, `[::1]`, `169.254.x`.
-- [ ] **F2.9** [SEC] Test: host publico que redirige a IP privada. Debe rechazarse en el
+- [x] **F2.9** [SEC] Test: host publico que redirige a IP privada. Debe rechazarse en el
       salto, no antes ni despues.
-- [ ] **F2.10** [SEC] Test: servidor local que declara `Content-Length: 1000` y manda
+- [x] **F2.10** [SEC] Test: servidor local que declara `Content-Length: 1000` y manda
       muchisimo mas. Debe cortarse en el limite.
-- [ ] **F2.11** Test: timeout con servidor que acepta y nunca responde.
-- [ ] **F2.12** Test: esquemas `file:`, `ftp:`, `jar:`, `data:` rechazados.
+- [x] **F2.11** Test: timeout con servidor que acepta y nunca responde.
+- [x] **F2.12** Test: esquemas `file:`, `ftp:`, `jar:`, `data:` rechazados.
 
 **Fase terminada cuando**: todos los tests pasan y cada regla de la constitution 6 tiene al
 menos un test que la cubre.
