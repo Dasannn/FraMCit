@@ -241,6 +241,13 @@ Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 - [ ] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista.
 - [ ] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion.
 - [ ] **F8.8** Anotar los numeros medidos en el informe de la fase.
+- [ ] **F8.10** Medir la contienda por el pool: las lecturas de disco de `ImageStore`
+      comparten los 4 hilos y la cola de 20 con las descargas de los jugadores. Tras un
+      reinicio con muchos cuadros a la vista, esas cargas pueden llenar la cola y hacer que
+      un jugador reciba "Hay varias descargas en curso". Escenario: muchos cuadros visibles
+      justo despues de arrancar, y un jugador usando `/imagen` en ese momento. Si estorba,
+      separar la E/S de disco en su propio pool: es rapida y local, y no deberia competir
+      con la red, que es lenta y remota.
 - [ ] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Conectar a la IP que ya valido
       `UrlGuard` en lugar de al nombre, conservando la cabecera `Host` y el SNI para que
       TLS siga verificando el certificado contra el dominio real. Aplica tambien a cada
@@ -282,7 +289,7 @@ que lo impide.
 | F5 persistencia | 13 | F4 |
 | F6 animacion | 14 | F5 |
 | F7 config y admin | 10 | F6 |
-| F8 rendimiento | 9 | F7 |
+| F8 rendimiento | 10 | F7 |
 | F9 Aternos | 6 | F8 |
 
-Total: 108 tareas.
+Total: 110 tareas.
