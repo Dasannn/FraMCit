@@ -18,6 +18,10 @@ id_ed25519
 *.log
 logs/
 
+# Gradle
+.gradle/
+build/
+
 # macOS
 .DS_Store
 ._*

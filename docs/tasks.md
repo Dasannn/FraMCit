@@ -40,21 +40,21 @@ Independiente. Puede correr en paralelo con F1.
 
 Rama: `feat/f1-esqueleto` - Worktree: `../framcit-f1-esqueleto`
 
-- [ ] **F1.1** Borrar `plugin/AGENTS.MD` y `plugin/claude.MD` (copias de los de la raiz).
-- [ ] **F1.2** Estructura Gradle en `plugin/`: `settings.gradle.kts`, `build.gradle.kts`,
+- [x] **F1.1** Borrar `plugin/AGENTS.MD` y `plugin/claude.MD` (copias de los de la raiz).
+- [x] **F1.2** Estructura Gradle en `plugin/`: `settings.gradle.kts`, `build.gradle.kts`,
       wrapper.
-- [ ] **F1.3** Toolchain Java 25 y plugin Shadow.
-- [ ] **F1.4** Repositorio `repo.papermc.io` y dependencia
+- [x] **F1.3** Toolchain Java 25 y plugin Shadow.
+- [x] **F1.4** Repositorio `repo.papermc.io` y dependencia
       `io.papermc.paper:paper-api:26.2.build.123-stable` con alcance `compileOnly`.
-- [ ] **F1.5** Dependencias TwelveMonkeys (`imageio-webp`, `imageio-core`) empaquetadas y
+- [x] **F1.5** Dependencias TwelveMonkeys (`imageio-webp`, `imageio-core`) empaquetadas y
       **reubicadas** por Shadow, para no chocar con otros plugins que las usen.
-- [ ] **F1.6** `paper-plugin.yml`: nombre `FraMCit`, version, `main`, `api-version`,
+- [x] **F1.6** `paper-plugin.yml`: nombre `FraMCit`, version, `main`, `api-version`,
       permisos `framcit.imagen` (default true) y `framcit.admin` (default op).
-- [ ] **F1.7** Clase `FraMCitPlugin` con arranque y apagado, sin logica.
-- [ ] **F1.8** Registrar `/imagen <url>` con la Command API de Paper, con sus alias, que de
+- [x] **F1.7** Clase `FraMCitPlugin` con arranque y apagado, sin logica.
+- [x] **F1.8** Registrar `/imagen <url>` con la Command API de Paper, con sus alias, que de
       momento solo devuelve un mensaje de marcador.
-- [ ] **F1.9** `.gitignore` para Gradle (`build/`, `.gradle/`).
-- [ ] **F1.10** README corto: como compilar y donde dejar el jar.
+- [x] **F1.9** `.gitignore` para Gradle (`build/`, `.gradle/`).
+- [x] **F1.10** README corto: como compilar y donde dejar el jar.
 
 **Fase terminada cuando**: `gradlew shadowJar` genera el jar, el Paper 26.2 local arranca
 con el plugin sin avisos en consola, y `/imagen hola` responde en el chat.
