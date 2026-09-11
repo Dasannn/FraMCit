@@ -1,0 +1,103 @@
+# =====================================================================
+# FraMCit - Archivo de configuración
+# =====================================================================
+# Todos los valores cuentan con valores por defecto seguros y probados.
+# Si alguna clave falta o contiene un valor inválido (texto donde va un número,
+# números negativos o cero donde no corresponde), el plugin usará automáticamente
+# el valor por defecto y registrará una advertencia clara en la consola.
+#
+# AVISO DE SEGURIDAD (Constitution 6):
+# Los límites del piso de seguridad (esquemas permitidos http/https y el bloqueo
+# estricto de IPs internas, loopback y privadas) NO son configurables por archivo.
+# Permanecen inmutables en código fuente para garantizar la seguridad del servidor.
+#
+# IMPORTANTE sobre la recarga en caliente (/imagen recargar):
+# - SE APLICAN AL VUELO:
+#   * Límites de descarga (timeouts, tamaño máximo en MB, redirecciones).
+#   * Límites de decodificación de imagen (dimensiones, frames, retardos).
+#   * Distancia máxima de visión del rastreador de mirada.
+#   * Tamaño máximo de la caché LRU en memoria.
+#
+# - REQUIEREN REINICIO DEL SERVIDOR:
+#   * descarga.hilos: El número de hilos del pool de descargas.
+#   * descarga.capacidad-cola: La capacidad máxima de la cola de espera.
+#   * animacion.periodo-rastreo-ticks: El intervalo del temporizador de mirada.
+#   Modificar estos valores en caliente mientras hay descargas vivas podría
+#   descartar peticiones o desestabilizar el servidor.
+# =====================================================================
+
+descarga:
+  # Tiempo de espera (en segundos) para establecer la conexión con el servidor remoto.
+  # Mínimo: 1 segundo.
+  # Por defecto: 5
+  tiempo-conexion-segundos: 5
+
+  # Tiempo de espera máximo (en segundos) para la lectura total del flujo de datos.
+  # Mínimo: 1 segundo.
+  # Por defecto: 15
+  tiempo-lectura-segundos: 15
+
+  # Tamaño máximo de descarga permitido en megabytes (MB).
+  # El corte se aplica estrictamente contando bytes durante la descarga.
+  # Mínimo: 1 MB.
+  # Por defecto: 5
+  tamano-maximo-mb: 5
+
+  # Número máximo de redirecciones HTTP consecutivas permitidas.
+  # Mínimo: 0.
+  # Por defecto: 3
+  max-redirecciones: 3
+
+  # Número de hilos simultáneos dedicados a la descarga y conversión de imágenes.
+  # [REQUIERE REINICIAR EL SERVIDOR PARA SURTIR EFECTO]
+  # Mínimo: 1.
+  # Por defecto: 4
+  hilos: 4
+
+  # Capacidad máxima de la cola de descargas en espera cuando todos los hilos están ocupados.
+  # [REQUIERE REINICIAR EL SERVIDOR PARA SURTIR EFECTO]
+  # Mínimo: 1.
+  # Por defecto: 20
+  capacidad-cola: 20
+
+imagen:
+  # Dimensiones máximas permitidas de la imagen original (ancho y alto en píxeles).
+  # Se verifica en cabecera antes de decodificarla por completo para evitar bombas de descompresión.
+  # Mínimo: 128 píxeles.
+  # Por defecto: 4096
+  dimension-maxima: 4096
+
+  # Número máximo de frames permitidos en una animación (GIF o WEBP).
+  # Mínimo: 1 frame.
+  # Por defecto: 100
+  frames-maximos: 100
+
+  # Retardo por defecto (en milisegundos) entre frames cuando el GIF no declara retardo o es 0.
+  # 100 ms = 10 frames por segundo (fps).
+  # Mínimo: 10 ms.
+  # Por defecto: 100
+  retardo-defecto-ms: 100
+
+  # Retardo mínimo permitido (en milisegundos) entre frames (tope de velocidad).
+  # 100 ms = 10 fps máximos.
+  # Mínimo: 10 ms.
+  # Por defecto: 100
+  retardo-minimo-ms: 100
+
+animacion:
+  # Distancia máxima (en bloques) a la que un jugador activa la animación de un marco al mirarlo.
+  # Mínimo: 1.0 bloque.
+  # Por defecto: 24.0
+  distancia-maxima-vision: 24.0
+
+  # Período (en ticks de servidor, 20 ticks = 1 segundo) con el que se ejecuta el raytrace de mirada.
+  # [REQUIERE REINICIAR EL SERVIDOR PARA SURTIR EFECTO]
+  # Mínimo: 1 tick.
+  # Por defecto: 5 (4 comprobaciones por segundo)
+  periodo-rastreo-ticks: 5
+
+cache:
+  # Tamaño máximo de la caché LRU de imágenes en memoria RAM en megabytes (MB).
+  # Mínimo: 1 MB.
+  # Por defecto: 128
+  tamano-maximo-mb: 128

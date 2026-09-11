@@ -23,12 +23,16 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ImageService {
 
-    private final Downloader downloader;
+    private volatile Downloader downloader;
     private final DownloadQueue queue;
 
     public ImageService(Downloader downloader, DownloadQueue queue) {
         this.downloader = Objects.requireNonNull(downloader, "downloader cannot be null");
         this.queue = Objects.requireNonNull(queue, "queue cannot be null");
+    }
+
+    public void setDownloader(Downloader downloader) {
+        this.downloader = Objects.requireNonNull(downloader, "downloader cannot be null");
     }
 
     /**

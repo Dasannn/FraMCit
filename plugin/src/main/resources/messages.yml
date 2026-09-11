@@ -1,0 +1,52 @@
+# =====================================================================
+# FraMCit - Archivo de mensajes
+# =====================================================================
+# Todos los mensajes del plugin mostrados en chat a jugadores y administradores.
+# Soporta variables según el mensaje (por ejemplo: {code}, {frames}, {id}, {url}, etc.)
+# Si alguna clave falta en este archivo, se usará automáticamente el mensaje
+# por defecto y se registrará una advertencia en la consola.
+# =====================================================================
+
+comando:
+  uso: "Uso: /imagen <url>"
+  descargando: "Descargando imagen..."
+  solo-jugador: "Este comando solo lo puede usar un jugador."
+  sin-permiso: "No tienes permiso para usar este comando."
+  inventario-lleno: "Inventario lleno: el mapa se solto al suelo."
+
+red:
+  url-invalida: "Esa URL no es valida."
+  esquema-no-permitido: "Solo se aceptan enlaces http y https."
+  destino-bloqueado: "URL no permitida."
+  host-no-resuelto: "No se pudo conectar con ese sitio."
+  conexion-fallida: "No se pudo conectar con ese sitio."
+  tiempo-agotado: "El sitio tardo demasiado en responder."
+  demasiado-grande: "La imagen supera el limite de 5 MB."
+  cola-llena: "Hay varias descargas en curso, espera un momento."
+  error-http: "El sitio respondio con error ({code}). El enlace puede haber caducado."
+  error-http-generico: "El sitio respondio con error. El enlace puede haber caducado."
+
+imagen:
+  no-es-imagen: "Ese enlace no apunta a una imagen."
+  formato-no-soportado: "Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP."
+  archivo-danado: "Ese archivo esta danado y no se pudo leer."
+  demasiados-frames: "Ese GIF tiene demasiados frames (limite: 100)."
+  dimensiones-excesivas: "Esa imagen es demasiado grande (limite: 4096x4096)."
+
+exito:
+  estatico: "Mapa creado correctamente (imagen estatica)."
+  animado: "Imagen animada cargada ({frames} frames). Se muestra el primer frame como imagen fija."
+
+admin:
+  recarga-exito: "Configuración y mensajes recargados. Aplicado al vuelo: límites de descarga, timeouts, redirecciones, dimensiones, frames, retardos, distancia de visión y tamaño de caché. NOTA: hilos de descarga, capacidad de cola y período de rastreo requieren REINICIAR el servidor."
+  info-no-marco: "Debes estar mirando a un marco con un mapa de FraMCit."
+  info-no-encontrado: "No se encontró información para el mapa con ID: {id}."
+  purgar-confirmacion: "¿Estás seguro de que deseas purgar la imagen id={id}? Esto la borrará del cache y del disco, y sus mapas quedarán en blanco. Para confirmar, ejecuta: /imagen purgar {target} confirmar"
+  purgar-exito: "Imagen purgada correctamente (id: {id}). Los mapas asociados ahora están en blanco."
+  purgar-no-encontrado: "No se encontró ninguna imagen con ese ID o URL."
+  purgar-uso: "Uso: /imagen purgar <url|id> [confirmar]"
+  listar-vacio: "No hay imágenes almacenadas."
+  listar-encabezado: "--- Imágenes almacenadas (Página {page}/{total_pages}) ---"
+  listar-item: "#{id} | {author} | {date} | {url}"
+  listar-pie: "Usa /imagen listar {next_page} para ver más."
+  listar-pagina-invalida: "Página fuera de rango. Las páginas van de 1 a {total_pages}."

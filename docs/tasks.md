@@ -209,18 +209,18 @@ Rama: `feat/f6-animacion` - Worktree: `../framcit-f6-animacion`
 
 Rama: `feat/f7-config-admin` - Worktree: `../framcit-f7-config-admin`
 
-- [ ] **F7.1** `config.yml` con los valores del spec 5, mas rango de vision, periodo del
+- [x] **F7.1** `config.yml` con los valores del spec 5, mas rango de vision, periodo del
       tracker y tamano de cache.
-- [ ] **F7.2** [SEC] Confirmar que los limites de seguridad **no** son configurables por
+- [x] **F7.2** [SEC] Confirmar que los limites de seguridad **no** son configurables por
       archivo.
-- [ ] **F7.3** `messages.yml` con todos los textos, editable sin recompilar.
-- [ ] **F7.4** Valores por defecto sanos si falta una clave o trae basura, avisando en el log.
-- [ ] **F7.5** `/imagen recargar` con permiso `framcit.admin`.
-- [ ] **F7.6** `/imagen info` mirando a un marco: autor, fecha, URL, id de mapa.
-- [ ] **F7.7** `/imagen purgar <url|id>`: borra del cache y del disco, con confirmacion.
-- [ ] **F7.8** `/imagen listar [pagina]` paginado.
-- [ ] **F7.9** Autocompletado de los subcomandos.
-- [ ] **F7.10** [SEC] Al arrancar, leer el TTL de cache de DNS efectivo de la JVM y avisar
+- [x] **F7.3** `messages.yml` con todos los textos, editable sin recompilar.
+- [x] **F7.4** Valores por defecto sanos si falta una clave o trae basura, avisando en el log.
+- [x] **F7.5** `/imagen recargar` con permiso `framcit.admin`.
+- [x] **F7.6** `/imagen info` mirando a un marco: autor, fecha, URL, id de mapa.
+- [x] **F7.7** `/imagen purgar <url|id>`: borra del cache y del disco, con confirmacion.
+- [x] **F7.8** `/imagen listar [pagina]` paginado.
+- [x] **F7.9** Autocompletado de los subcomandos.
+- [x] **F7.10** [SEC] Al arrancar, leer el TTL de cache de DNS efectivo de la JVM y avisar
       en el log si esta desactivado (`0`). Con la cache desactivada, la proteccion de
       `UrlGuard` es vulnerable al reenlace de DNS (R6, constitution 6.1).
 

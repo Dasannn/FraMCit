@@ -1,5 +1,6 @@
 package com.dasannn.framcit.image;
 
+import com.dasannn.framcit.command.Messages;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
@@ -17,10 +18,12 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Decodificador de imagenes estaticas y animadas.
- * Aplica los limites de seguridad del spec.md (seccion 5) antes de la decodificacion completa,
- * resuelve la composicion de frames parciales de GIF segun disposal methods,
- * y normaliza los retardos de reproduccion (tope de 10 fps).
+ * Decodificador de imágenes estáticas y animadas.
+ * Aplica los límites de seguridad del spec.md (sección 5) antes de la decodificación completa,
+ * resuelve la composición de frames parciales de GIF según disposal methods,
+ * y normaliza los retardos de reproducción.
+ *
+ * Configurable dinámicamente mediante config.yml (F7.1, F7.4).
  */
 public final class ImageDecoder {
 
@@ -29,7 +32,48 @@ public final class ImageDecoder {
     public static final int DEFAULT_DELAY_MS = 100; // 10 fps (100 ms por frame)
     public static final int MIN_DELAY_MS = 100;     // Tope de 10 fps
 
+    private static volatile int maxDimension = MAX_DIMENSION;
+    private static volatile int maxFrames = MAX_FRAMES;
+    private static volatile int defaultDelayMs = DEFAULT_DELAY_MS;
+    private static volatile int minDelayMs = MIN_DELAY_MS;
+
     private ImageDecoder() {}
+
+    /**
+     * Configura dinámicamente los límites de decodificación.
+     */
+    public static void configure(int maxDim, int maxF, int defDelay, int minDelay) {
+        maxDimension = maxDim;
+        maxFrames = maxF;
+        defaultDelayMs = defDelay;
+        minDelayMs = minDelay;
+    }
+
+    /**
+     * Restablece los límites a sus valores por defecto.
+     */
+    public static void resetDefaults() {
+        maxDimension = MAX_DIMENSION;
+        maxFrames = MAX_FRAMES;
+        defaultDelayMs = DEFAULT_DELAY_MS;
+        minDelayMs = MIN_DELAY_MS;
+    }
+
+    public static int getMaxDimension() {
+        return maxDimension;
+    }
+
+    public static int getMaxFrames() {
+        return maxFrames;
+    }
+
+    public static int getDefaultDelayMs() {
+        return defaultDelayMs;
+    }
+
+    public static int getMinDelayMs() {
+        return minDelayMs;
+    }
 
     /**
      * Decodifica los bytes dados en una {@link DecodedImage}.
@@ -40,21 +84,21 @@ public final class ImageDecoder {
      */
     public static DecodedImage decode(byte[] data) {
         if (data == null || data.length == 0) {
-            throw new ImageValidationException("Ese enlace no apunta a una imagen.");
+            throw new ImageValidationException(Messages.ERROR_NOT_AN_IMAGE);
         }
 
         ImageFormat format = FormatSniffer.sniff(data)
-                .orElseThrow(() -> new ImageValidationException("Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP."));
+                .orElseThrow(() -> new ImageValidationException(Messages.ERROR_UNSUPPORTED_FORMAT));
 
-        // Comprobacion rapida de cabecera GIF (Logical Screen Descriptor en bytes 6 a 9)
+        // Comprobación rápida de cabecera GIF (Logical Screen Descriptor en bytes 6 a 9)
         if (format == ImageFormat.GIF) {
             if (data.length < 10) {
-                throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.");
+                throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE);
             }
             int lsdW = (data[6] & 0xFF) | ((data[7] & 0xFF) << 8);
             int lsdH = (data[8] & 0xFF) | ((data[9] & 0xFF) << 8);
-            if (lsdW > MAX_DIMENSION || lsdH > MAX_DIMENSION) {
-                throw new ImageValidationException("Esa imagen es demasiado grande (limite: 4096x4096).");
+            if (lsdW > maxDimension || lsdH > maxDimension) {
+                throw new ImageValidationException(Messages.ERROR_DIMENSIONS_TOO_LARGE);
             }
         }
 
@@ -65,29 +109,29 @@ public final class ImageDecoder {
 
         try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
             if (iis == null) {
-                throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.");
+                throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE);
             }
 
             ImageReader reader = getReader(format, iis);
             if (reader == null) {
-                throw new ImageValidationException("Formato no soportado. Usa PNG, JPEG, BMP, GIF o WEBP.");
+                throw new ImageValidationException(Messages.ERROR_UNSUPPORTED_FORMAT);
             }
 
             try {
                 reader.setInput(iis, false, false);
 
-                // 1. Limite de dimensiones leyendo SOLO la cabecera (getWidth / getHeight no decodifican pixels)
+                // 1. Límite de dimensiones leyendo SOLO la cabecera (getWidth / getHeight no decodifican pixels)
                 int width;
                 int height;
                 try {
                     width = reader.getWidth(0);
                     height = reader.getHeight(0);
                 } catch (Exception e) {
-                    throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.", e);
+                    throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE, e);
                 }
 
-                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-                    throw new ImageValidationException("Esa imagen es demasiado grande (limite: 4096x4096).");
+                if (width > maxDimension || height > maxDimension) {
+                    throw new ImageValidationException(Messages.ERROR_DIMENSIONS_TOO_LARGE);
                 }
 
                 // Canvas dimensions para GIF
@@ -102,19 +146,19 @@ public final class ImageDecoder {
                     }
                 }
 
-                // 2. Limite de frames antes de la decodificacion completa
+                // 2. Límite de frames antes de la decodificación completa
                 int declaredFrames = -1;
                 if (format == ImageFormat.GIF || format == ImageFormat.WEBP) {
                     try {
                         declaredFrames = reader.getNumImages(true);
                     } catch (Exception ignored) {}
 
-                    if (declaredFrames > MAX_FRAMES) {
-                        throw new ImageValidationException("Ese GIF tiene demasiados frames (limite: 100).");
+                    if (declaredFrames > maxFrames) {
+                        throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
                     }
                 }
 
-                // 3. Decodificacion segun formato
+                // 3. Decodificación según formato
                 if (format == ImageFormat.GIF) {
                     return decodeGif(reader, canvasWidth, canvasHeight, declaredFrames);
                 } else if (format == ImageFormat.WEBP) {
@@ -128,14 +172,14 @@ public final class ImageDecoder {
         } catch (ImageValidationException e) {
             throw e;
         } catch (Exception e) {
-            throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.", e);
+            throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE, e);
         }
     }
 
     private static DecodedImage decodeStatic(ImageReader reader, ImageFormat format, int width, int height) throws IOException {
         BufferedImage img = reader.read(0);
         if (img == null) {
-            throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.");
+            throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE);
         }
         ImageFrame frame = new ImageFrame(img, 0);
         return new DecodedImage(format, List.of(frame), width, height);
@@ -146,8 +190,8 @@ public final class ImageDecoder {
         int limit = (declaredFrames > 0) ? declaredFrames : Integer.MAX_VALUE;
 
         for (int i = 0; i < limit; i++) {
-            if (frames.size() >= MAX_FRAMES) {
-                throw new ImageValidationException("Ese GIF tiene demasiados frames (limite: 100).");
+            if (frames.size() >= maxFrames) {
+                throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
             }
             BufferedImage frameImg;
             try {
@@ -158,15 +202,15 @@ public final class ImageDecoder {
             if (frameImg == null) {
                 break;
             }
-            if (frameImg.getWidth() > MAX_DIMENSION || frameImg.getHeight() > MAX_DIMENSION) {
-                throw new ImageValidationException("Esa imagen es demasiado grande (limite: 4096x4096).");
+            if (frameImg.getWidth() > maxDimension || frameImg.getHeight() > maxDimension) {
+                throw new ImageValidationException(Messages.ERROR_DIMENSIONS_TOO_LARGE);
             }
-            // WEBP animado: retardo fijo de 100 ms (10 fps) segun spec 4.2
-            frames.add(new ImageFrame(frameImg, DEFAULT_DELAY_MS));
+            // WEBP animado: retardo por defecto configurado
+            frames.add(new ImageFrame(frameImg, defaultDelayMs));
         }
 
         if (frames.isEmpty()) {
-            throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.");
+            throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE);
         }
 
         // Si es de un solo frame, es estatica (retardo 0)
@@ -187,8 +231,8 @@ public final class ImageDecoder {
         BufferedImage previousSnapshot = null;
 
         for (int i = 0; i < limit; i++) {
-            if (frames.size() >= MAX_FRAMES) {
-                throw new ImageValidationException("Ese GIF tiene demasiados frames (limite: 100).");
+            if (frames.size() >= maxFrames) {
+                throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
             }
 
             BufferedImage rawFrame;
@@ -214,8 +258,8 @@ public final class ImageDecoder {
             int frameH = rawFrame.getHeight();
 
             // Si el frame declara dimensiones mayores al maximo permitido
-            if (left + frameW > MAX_DIMENSION || top + frameH > MAX_DIMENSION) {
-                throw new ImageValidationException("Esa imagen es demasiado grande (limite: 4096x4096).");
+            if (left + frameW > maxDimension || top + frameH > maxDimension) {
+                throw new ImageValidationException(Messages.ERROR_DIMENSIONS_TOO_LARGE);
             }
 
             // Si el canvas era menor que las dimensiones requeridas por este frame, expandirlo
@@ -267,7 +311,7 @@ public final class ImageDecoder {
         }
 
         if (frames.isEmpty()) {
-            throw new ImageValidationException("Ese archivo esta danado y no se pudo leer.");
+            throw new ImageValidationException(Messages.ERROR_CORRUPTED_FILE);
         }
 
         // Si solo tiene 1 frame, es un GIF estatico (retardo 0)
@@ -279,17 +323,17 @@ public final class ImageDecoder {
     }
 
     /**
-     * Normaliza los retardos de GIF (en centesimas de segundo):
-     * - Si es <= 0 o basura: 100 ms (10 fps por defecto).
-     * - Si es menor a 100 ms: tope de 10 fps (100 ms minimo).
-     * - Si es >= 100 ms: se respeta el valor.
+     * Normaliza los retardos de GIF (en centésimas de segundo):
+     * - Si es <= 0 o basura: retardo por defecto configurado.
+     * - Si es menor a minDelayMs: tope según el mínimo configurado.
+     * - Si es >= minDelayMs: se respeta el valor.
      */
     public static int normalizeDelay(int delayCentiseconds) {
         if (delayCentiseconds <= 0) {
-            return DEFAULT_DELAY_MS;
+            return defaultDelayMs;
         }
         int delayMs = delayCentiseconds * 10;
-        return Math.max(delayMs, MIN_DELAY_MS);
+        return Math.max(delayMs, minDelayMs);
     }
 
     private static GifFrameMetadata parseGifFrameMetadata(IIOMetadata metadata) {

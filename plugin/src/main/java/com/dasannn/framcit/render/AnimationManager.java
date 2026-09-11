@@ -28,6 +28,19 @@ import java.util.logging.Logger;
 public class AnimationManager implements FraMCitRenderer.FrameProvider {
 
     public static final int MIN_FRAME_DELAY_MS = 100; // Tope de 10 fps (spec 4.2, F6.7)
+    private static volatile int minFrameDelayMs = MIN_FRAME_DELAY_MS;
+
+    public static void setMinFrameDelayMs(int minDelay) {
+        minFrameDelayMs = minDelay;
+    }
+
+    public static int getMinFrameDelayMs() {
+        return minFrameDelayMs;
+    }
+
+    public static void resetDefaults() {
+        minFrameDelayMs = MIN_FRAME_DELAY_MS;
+    }
 
     private final ImageStore imageStore;
     private final Logger logger;
@@ -226,12 +239,17 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
         return MIN_FRAME_DELAY_MS;
     }
 
+    public void removeMap(int mapId) {
+        disabledMaps.remove(mapId);
+        states.entrySet().removeIf(entry -> entry.getKey().mapId() == mapId);
+    }
+
     /**
-     * Aplica el tope de 10 fps (mínimo 100 ms) y corrige retardos inválidos o cero (spec 4.2, F6.7).
+     * Aplica el tope de velocidad configurado (mínimo de retardo) y corrige retardos inválidos o cero (spec 4.2, F6.7).
      */
     public static int getEffectiveDelayMs(int rawDelayMs) {
-        if (rawDelayMs < MIN_FRAME_DELAY_MS) {
-            return MIN_FRAME_DELAY_MS;
+        if (rawDelayMs < minFrameDelayMs) {
+            return minFrameDelayMs;
         }
         return rawDelayMs;
     }

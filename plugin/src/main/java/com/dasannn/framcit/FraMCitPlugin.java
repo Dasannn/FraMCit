@@ -1,9 +1,14 @@
 package com.dasannn.framcit;
 
 import com.dasannn.framcit.command.ImageCommand;
+import com.dasannn.framcit.command.Messages;
+import com.dasannn.framcit.config.FraMCitConfig;
+import com.dasannn.framcit.image.ImageDecoder;
 import com.dasannn.framcit.image.TwelveMonkeysRegistrar;
+import com.dasannn.framcit.net.DnsCacheChecker;
 import com.dasannn.framcit.net.DownloadQueue;
 import com.dasannn.framcit.net.Downloader;
+import com.dasannn.framcit.net.UrlGuard;
 import com.dasannn.framcit.render.AnimationManager;
 import com.dasannn.framcit.render.AnimationScheduler;
 import com.dasannn.framcit.render.FraMCitAnimationListener;
@@ -16,8 +21,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.time.Duration;
+
 public final class FraMCitPlugin extends JavaPlugin {
 
+    private FraMCitConfig pluginConfig;
     private DownloadQueue downloadQueue;
     private Downloader downloader;
     private ImageService imageService;
@@ -30,11 +39,26 @@ public final class FraMCitPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // F7.10 / SEC R6: Comprobar TTL de DNS de la JVM y alertar si está en 0
+        DnsCacheChecker.checkDnsCacheTtl(getLogger());
+
+        // Registrar TwelveMonkeys para soporte de formato WEBP
         TwelveMonkeysRegistrar.register(getLogger());
 
-        this.downloader = new Downloader();
-        this.downloadQueue = new DownloadQueue();
-        this.imageStore = new ImageStore(getDataFolder(), downloadQueue, getLogger());
+        // F7.1 y F7.3: Guardar archivos por defecto config.yml y messages.yml si no existen
+        saveDefaultConfig();
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
+
+        // Cargar configuración y mensajes (F7.1, F7.3, F7.4)
+        reloadPluginConfig();
+        reloadMessages();
+
+        // Inicializar componentes de red y persistencia con la configuración activa
+        this.downloadQueue = new DownloadQueue(pluginConfig.getDownloadThreads(), pluginConfig.getQueueCapacity());
+        this.imageStore = new ImageStore(getDataFolder().toPath(), downloadQueue, getLogger(), pluginConfig.getMaxCacheBytes());
         this.imageStore.loadIndex();
         this.imageStore.relinkMaps();
 
@@ -42,10 +66,12 @@ public final class FraMCitPlugin extends JavaPlugin {
         FraMCitRenderer.setGlobalFrameProvider(animationManager);
 
         this.gazeTracker = new GazeTracker(animationManager, imageStore);
+        this.gazeTracker.setMaxDistance(pluginConfig.getGazeMaxDistance());
         this.animationScheduler = new AnimationScheduler(animationManager, getLogger());
 
         // Iniciar ciclos periódicos (ARCHITECTURE 5, F6.3, F6.6)
-        this.gazeTrackerTask = Bukkit.getScheduler().runTaskTimer(this, gazeTracker, 5L, 5L);
+        long gazeTicks = Math.max(1L, pluginConfig.getGazePeriodTicks());
+        this.gazeTrackerTask = Bukkit.getScheduler().runTaskTimer(this, gazeTracker, gazeTicks, gazeTicks);
         this.animationSchedulerTask = Bukkit.getScheduler().runTaskTimer(this, animationScheduler, 1L, 1L);
 
         // Registrar listener de eventos para prevención de fugas de memoria (F6.11)
@@ -58,6 +84,54 @@ public final class FraMCitPlugin extends JavaPlugin {
         });
 
         getLogger().info("FraMCit habilitado correctamente.");
+    }
+
+    /**
+     * Recarga la configuración de config.yml aplicando cambios al vuelo (F7.5).
+     */
+    public void reloadPluginConfig() {
+        File configFile = new File(getDataFolder(), "config.yml");
+        this.pluginConfig = FraMCitConfig.load(configFile, getLogger());
+
+        // Aplicar límites de decodificación y animación al vuelo
+        ImageDecoder.configure(
+            pluginConfig.getMaxDimension(),
+            pluginConfig.getMaxFrames(),
+            pluginConfig.getDefaultDelayMs(),
+            pluginConfig.getMinDelayMs()
+        );
+        AnimationManager.setMinFrameDelayMs(pluginConfig.getMinDelayMs());
+
+        // Actualizar Downloader al vuelo
+        this.downloader = new Downloader(
+            new UrlGuard(),
+            Duration.ofSeconds(pluginConfig.getConnectTimeoutSeconds()),
+            Duration.ofSeconds(pluginConfig.getReadTimeoutSeconds()),
+            pluginConfig.getMaxDownloadSizeBytes(),
+            pluginConfig.getMaxRedirects()
+        );
+
+        if (imageService != null) {
+            imageService.setDownloader(this.downloader);
+        }
+
+        // Actualizar distancia de visión de GazeTracker al vuelo
+        if (gazeTracker != null) {
+            gazeTracker.setMaxDistance(pluginConfig.getGazeMaxDistance());
+        }
+
+        // Actualizar límite de caché LRU en memoria al vuelo
+        if (imageStore != null && imageStore.getLruCache() != null) {
+            imageStore.getLruCache().setMaxBytes(pluginConfig.getMaxCacheBytes());
+        }
+    }
+
+    /**
+     * Recarga los mensajes de messages.yml (F7.3, F7.5).
+     */
+    public void reloadMessages() {
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        Messages.load(messagesFile, getLogger());
     }
 
     @Override
@@ -80,6 +154,10 @@ public final class FraMCitPlugin extends JavaPlugin {
             downloadQueue.close();
         }
         getLogger().info("FraMCit deshabilitado.");
+    }
+
+    public FraMCitConfig getPluginConfig() {
+        return pluginConfig;
     }
 
     public ImageService getImageService() {
