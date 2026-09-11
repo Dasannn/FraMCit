@@ -60,11 +60,12 @@ public final class MapItemBuilder {
         // Nombre visible sin cursiva
         meta.displayName(Component.text(itemName).decoration(TextDecoration.ITALIC, false));
 
-        // Lore con origen, autor y fecha (F4.4)
+        // Lore con origen, autor y fecha (F4.4), y advertencia de no copiable/ampliable (F12.16)
         List<Component> lore = List.of(
             Component.text("Origen: " + domain, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
             Component.text("Autor: " + authorName, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
-            Component.text("Fecha: " + dateStr, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)
+            Component.text("Fecha: " + dateStr, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
+            Component.text("No se puede copiar ni ampliar", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)
         );
         meta.lore(lore);
 
