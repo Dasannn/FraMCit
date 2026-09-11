@@ -24,10 +24,12 @@ Owner y unica autoridad de producto: el propietario del repositorio.
 
 ## 3. Alcance
 
-Dos specs:
+Tres specs:
 
 - **Spec 001** (`docs/spec.md`): imagenes y GIFs en marcos.
 - **Spec 002** (`docs/spec-002-economia.md`): cobro opcional por imagen mediante Vault.
+- **Spec 003** (`docs/spec-003-slots.md`): cupo de imagenes por jugador segun sus nodos
+  de permiso.
 
 Dentro del alcance:
 - Comando que entrega al jugador un item mapa con la imagen de una URL.
@@ -35,6 +37,7 @@ Dentro del alcance:
 - Animacion de GIF unicamente para jugadores que miran el marco.
 - Persistencia: las imagenes sobreviven al reinicio del servidor.
 - Cobro opcional por imagen, desactivado mientras no se configure.
+- Cupo de imagenes por jugador, graduable con nodos de permiso.
 
 Fuera del alcance (requiere aprobacion nueva para entrar):
 - Busqueda de imagenes por palabras clave / integracion con APIs de Google u otras.
@@ -68,9 +71,15 @@ Una dependencia que impida arrancar es un fallo de diseno, no una funcionalidad.
    servidor recien instalado no deja que cualquiera haga que el servidor descargue de
    internet. Abrirlo es una decision consciente del administrador, no el punto de partida.
 
-   Lo que sigue sin existir, y no se anade sin aprobacion nueva: cooldown, lista blanca de
-   dominios y limite de mapas por jugador. Quien puede usar el comando se decide fuera;
-   cuanto puede usarlo, no se limita.
+   Lo que sigue sin existir, y no se anade sin aprobacion nueva: cooldown y lista blanca
+   de dominios. Quien puede usar el comando se decide fuera del plugin; con que frecuencia
+   puede usarlo, no se limita.
+
+   > **Enmienda del 2026-09-10 (segunda).** El *limite de mapas por jugador* sale de esta
+   > lista de prohibiciones y pasa a existir, con la forma de un cupo de imagenes poseidas
+   > graduable por nodos de permiso (`docs/spec-003-slots.md`). Sigue cumpliendo el
+   > principio: el plugin declara los nodos, el administrador decide quien recibe cuantos.
+   > El cooldown y la lista blanca siguen prohibidos.
 
    > **Enmienda del 2026-09-10.** Hasta esta fecha el principio era *acceso abierto*
    > (`default: true`, cualquier jugador). El owner decidio cerrarlo por defecto tras

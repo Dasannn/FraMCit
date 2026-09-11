@@ -24,14 +24,17 @@ mirando el marco donde esta colgado.
 
 Alias: `/img`, `/image`.
 
-- Un unico argumento: la URL. Sin flags, sin subcomandos.
+- Un unico argumento: la URL. Sin flags.
+- Los subcomandos de jugador (`mias`, `borrar`) los anade el spec 003; los de
+  administracion estan en la seccion 8.
 - Solo ejecutable por un jugador. Desde consola responde que el comando requiere un
   jugador (no hay a quien darle el item).
 - Permiso: `framcit.imagen`, por defecto **solo operadores** (`default: op`). El comando
   viene cerrado y el administrador lo abre a quien quiera con su gestor de permisos.
   (Cambiado en la enmienda del 2026-09-10; antes era `default: true`. Ver constitution 4.2
   y `docs/spec-002-economia.md` seccion 7.)
-- Sin cooldown, sin limite de usos por jugador, sin lista blanca de dominios.
+- Sin cooldown y sin lista blanca de dominios. El numero de imagenes que un jugador puede
+  tener a la vez si esta limitado: ver `docs/spec-003-slots.md`.
 - El uso del comando puede costar dinero del juego si el servidor tiene economia. Ver
   `docs/spec-002-economia.md`.
 
@@ -214,6 +217,9 @@ Comandos con permiso `framcit.admin` (por defecto solo operadores):
 - `/imagen purgar <url|id>` - borra una imagen del cache y del disco. Los mapas que la
   usaban quedan en blanco.
 - `/imagen listar [pagina]` - lista las imagenes almacenadas: id, autor, fecha, URL.
+
+El spec 003 anade `/imagen uso` y `/imagen purgar-jugador`, y permite filtrar `listar` por
+jugador.
 
 ### 8.1 Registro (log)
 
