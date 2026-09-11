@@ -80,4 +80,35 @@ class DnsCacheCheckerTest {
         Logger logger = Logger.getLogger("TestLogger-Live");
         assertDoesNotThrow(() -> DnsCacheChecker.checkDnsCacheTtl(logger));
     }
+
+    @Test
+    @DisplayName("F7.10 [SEC] - la propiedad heredada sun.net.inetaddr.ttl=0 tambien emite aviso")
+    void testLegacySystemPropertyAlsoWarns() {
+        // Arrancar la JVM con -Dsun.net.inetaddr.ttl=0 desactiva la cache igual que la
+        // propiedad de seguridad, pero deja Security.getProperty devolviendo null. Sin
+        // mirar las dos, la cache quedaria desactivada sin que nadie avise.
+        Logger logger = Logger.getLogger("TestLogger-Legacy");
+        logger.setUseParentHandlers(false);
+        TestLogHandler handler = new TestLogHandler();
+        logger.addHandler(handler);
+
+        String previous = System.getProperty(DnsCacheChecker.LEGACY_PROPERTY_NAME);
+        try {
+            System.setProperty(DnsCacheChecker.LEGACY_PROPERTY_NAME, "0");
+            boolean warned = DnsCacheChecker.checkDnsCacheTtl(logger);
+
+            // Solo es exigible si la propiedad de seguridad no manda en este entorno.
+            String securityTtl = java.security.Security.getProperty(DnsCacheChecker.PROPERTY_NAME);
+            if (securityTtl == null || securityTtl.isBlank()) {
+                assertTrue(warned, "sun.net.inetaddr.ttl=0 debe emitir aviso de R6");
+                assertFalse(handler.records.isEmpty(), "Debe quedar registrado el aviso");
+            }
+        } finally {
+            if (previous == null) {
+                System.clearProperty(DnsCacheChecker.LEGACY_PROPERTY_NAME);
+            } else {
+                System.setProperty(DnsCacheChecker.LEGACY_PROPERTY_NAME, previous);
+            }
+        }
+    }
 }

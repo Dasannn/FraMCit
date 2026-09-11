@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 public final class DnsCacheChecker {
 
     public static final String PROPERTY_NAME = "networkaddress.cache.ttl";
+    public static final String LEGACY_PROPERTY_NAME = "sun.net.inetaddr.ttl";
 
     public static final String WARNING_MESSAGE =
         "[SEC R6] AVISO DE SEGURIDAD CRÍTICO: La caché de DNS de la JVM está desactivada (networkaddress.cache.ttl=0). " +
@@ -35,7 +36,14 @@ public final class DnsCacheChecker {
      * @return true si se detectó TTL=0 y se emitió aviso; false si el TTL es seguro o null.
      */
     public static boolean checkDnsCacheTtl(Logger logger) {
+        // La propiedad de seguridad manda cuando esta definida. Si no lo esta, la JVM
+        // todavia honra la propiedad de sistema heredada -Dsun.net.inetaddr.ttl, que es
+        // justo la forma de desactivar la cache que advierte el mensaje. Sin mirar las dos,
+        // arrancar con -Dsun.net.inetaddr.ttl=0 dejaria la cache desactivada en silencio.
         String ttlProperty = Security.getProperty(PROPERTY_NAME);
+        if (ttlProperty == null || ttlProperty.isBlank()) {
+            ttlProperty = System.getProperty(LEGACY_PROPERTY_NAME);
+        }
         return checkDnsTtlValue(ttlProperty, logger);
     }
 
