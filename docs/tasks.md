@@ -368,41 +368,41 @@ Rama: `feat/f12-pausa-inerte` - Worktree: `../framcit-f12-pausa-inerte`
 
 Implementa las secciones 2.4 y 4.4 del spec 001. Independiente de F11.
 
-- [ ] **F12.1** `config.yml`: `animacion.pausa-por-mirada`, por defecto 5 minutos. A cero
+- [x] **F12.1** `config.yml`: `animacion.pausa-por-mirada`, por defecto 5 minutos. A cero
       la regla se desactiva y la animacion no se detiene nunca por este motivo.
-- [ ] **F12.2** `GazeTracker` guarda, por par (jugador, marco), el tick en que empezo a
+- [x] **F12.2** `GazeTracker` guarda, por par (jugador, marco), el tick en que empezo a
       mirar. Mientras siga mirando no se toca.
-- [ ] **F12.3** Al dejar de mirar, la entrada se borra. Eso es lo que hace que el contador
+- [x] **F12.3** Al dejar de mirar, la entrada se borra. Eso es lo que hace que el contador
       sea de mirada **seguida** y no acumulada: no hay nada que acumular.
-- [ ] **F12.4** El estado de un jugador se vacia entero al desconectarse.
-- [ ] **F12.5** `AnimationScheduler` no envia frames a un par que supere el umbral.
+- [x] **F12.4** El estado de un jugador se vacia entero al desconectarse.
+- [x] **F12.5** `AnimationScheduler` no envia frames a un par que supere el umbral.
       Pregunta, no lleva cuenta propia.
-- [ ] **F12.6** Al pausarse, el mapa se queda en el frame en el que estaba. No se reinicia
+- [x] **F12.6** Al pausarse, el mapa se queda en el frame en el que estaba. No se reinicia
       al primero ni se pone en blanco.
-- [ ] **F12.7** Se reanuda apartando la vista y volviendo a mirar. Ese es el unico
+- [x] **F12.7** Se reanuda apartando la vista y volviendo a mirar. Ese es el unico
       disparador.
-- [ ] **F12.8** Aplica igual al mapa sostenido en la mano (spec 001 seccion 4.3).
-- [ ] **F12.9** Pausar **no** descarga la imagen ni la saca del cache LRU. Lo unico que se
+- [x] **F12.8** Aplica igual al mapa sostenido en la mano (spec 001 seccion 4.3).
+- [x] **F12.9** Pausar **no** descarga la imagen ni la saca del cache LRU. Lo unico que se
       deja de hacer es enviar paquetes.
-- [ ] **F12.10** Tests del contador: que se reinicie al apartar la vista, que no acumule, y
+- [x] **F12.10** Tests del contador: que se reinicie al apartar la vista, que no acumule, y
       que a cero la regla quede desactivada.
-- [ ] **F12.11** [R8] **Verificar en el javadoc de Paper 26.2 el evento de la mesa de
+- [x] **F12.11** [R8] **Verificar en el javadoc de Paper 26.2 el evento de la mesa de
       cartografia antes de escribir el listener.** No dar por bueno ningun nombre de
       evento sin comprobarlo. Anotar en el informe cual es y donde se verifico.
-- [ ] **F12.12** `CraftGuard`: si un ingrediente lleva la marca de FraMCit, el resultado
+- [x] **F12.12** `CraftGuard`: si un ingrediente lleva la marca de FraMCit, el resultado
       sale vacio. Mesa de crafteo, con `PrepareItemCraftEvent`.
-- [ ] **F12.13** Lo mismo para la mesa de cartografia, con el evento verificado en F12.11.
+- [x] **F12.13** Lo mismo para la mesa de cartografia, con el evento verificado en F12.11.
       Cubre copiar, ampliar y bloquear.
-- [ ] **F12.14** El item nunca se consume ni se destruye: el jugador recupera sus
+- [x] **F12.14** El item nunca se consume ni se destruye: el jugador recupera sus
       ingredientes tal cual.
-- [ ] **F12.15** Se bloquea la categoria entera, no una lista de recetas. Una lista habria
+- [x] **F12.15** Se bloquea la categoria entera, no una lista de recetas. Una lista habria
       que mantenerla cada vez que Minecraft anada una receta que consuma mapas.
-- [ ] **F12.16** La descripcion del item dice que no se puede copiar ni ampliar.
-- [ ] **F12.17** Quitar el plugin devuelve esos mapas a comportarse como mapas normales:
+- [x] **F12.16** La descripcion del item dice que no se puede copiar ni ampliar.
+- [x] **F12.17** Quitar el plugin devuelve esos mapas a comportarse como mapas normales:
       la restriccion no sobrevive al jar.
-- [ ] **F12.18** Prueba manual: mesa de crafteo con mapa vacio, y mesa de cartografia
+- [x] **F12.18** Prueba manual: mesa de crafteo con mapa vacio, y mesa de cartografia
       copiando, ampliando y bloqueando. Ninguna produce nada.
-- [ ] **F12.19** Prueba manual: mirar un GIF mas de 5 minutos sin apartar la vista y
+- [x] **F12.19** Prueba manual: mirar un GIF mas de 5 minutos sin apartar la vista y
       comprobar que se detiene; apartar la vista y volver, y comprobar que sigue desde el
       frame en el que estaba.
 
