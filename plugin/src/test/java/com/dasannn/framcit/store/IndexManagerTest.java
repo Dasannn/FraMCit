@@ -121,4 +121,67 @@ class IndexManagerTest {
         assertDoesNotThrow(manager::load);
         assertEquals(0, manager.size());
     }
+
+    @Test
+    @DisplayName("F11.6 - Migración de index.json legacy: entradas sin campo owners se asignan a su autor")
+    void testLegacyIndexMigrationAddsAuthorUuidToOwners() throws IOException {
+        Path indexPath = tempDir.resolve("index.json");
+
+        // index.json pre-F11 sin campo "owners"
+        String legacyJson = """
+            {
+              "version": 1,
+              "entries": [
+                {
+                  "mapId": 1,
+                  "originalUrl": "https://example.com/alice.png",
+                  "normalizedUrl": "https://example.com/alice.png",
+                  "authorName": "Alice",
+                  "authorUuid": "11111111-1111-1111-1111-111111111111",
+                  "createdAt": "2026-09-01",
+                  "format": "PNG",
+                  "frameCount": 1,
+                  "delays": [0],
+                  "paletteVersion": 1,
+                  "orphan": false
+                },
+                {
+                  "mapId": 2,
+                  "originalUrl": "https://example.com/unknown.png",
+                  "normalizedUrl": "https://example.com/unknown.png",
+                  "authorName": "Desconocido",
+                  "authorUuid": null,
+                  "createdAt": "2026-09-01",
+                  "format": "PNG",
+                  "frameCount": 1,
+                  "delays": [0],
+                  "paletteVersion": 1,
+                  "orphan": false
+                }
+              ]
+            }
+            """;
+        Files.writeString(indexPath, legacyJson, StandardCharsets.UTF_8);
+
+        IndexManager manager = new IndexManager(tempDir, LOGGER);
+        manager.load();
+
+        assertEquals(2, manager.size());
+
+        ImageIndexEntry entry1 = manager.getByMapId(1);
+        assertNotNull(entry1);
+        assertNotNull(entry1.getOwners());
+        assertEquals(List.of("11111111-1111-1111-1111-111111111111"), entry1.getOwners());
+        assertTrue(entry1.hasOwner("11111111-1111-1111-1111-111111111111"));
+
+        ImageIndexEntry entry2 = manager.getByMapId(2);
+        assertNotNull(entry2);
+        assertNotNull(entry2.getOwners());
+        assertTrue(entry2.getOwners().isEmpty(), "Autor desconocido queda con lista de owners vacía sin borrar la entrada");
+
+        // El archivo migrado se guardó con el nuevo campo
+        String savedJson = Files.readString(indexPath, StandardCharsets.UTF_8);
+        assertTrue(savedJson.contains("owners"), "El index.json migrado debe persistir el campo owners");
+        assertTrue(savedJson.contains("11111111-1111-1111-1111-111111111111"));
+    }
 }

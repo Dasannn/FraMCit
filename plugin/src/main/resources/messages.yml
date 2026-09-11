@@ -56,3 +56,15 @@ economia:
   cobro-correcto: "Se te han cobrado {precio} por la imagen."
   saldo-perdido: "Ya no tienes suficiente dinero: la imagen no se entrego."
   fallo-pago: "No se pudo procesar el pago. Avisa al staff."
+
+cupos:
+  cupo-lleno-al-pedir: "Ya tienes {usados} de {limite} imagenes. Borra una con /imagen borrar <id> o mira las tuyas con /imagen mias."
+  cupo-demasiados-frames: "Esa imagen tiene {frames} frames y tu limite es {limite}. No se te cobro nada."
+  cupo-lleno-al-entregar: "Llenaste tu cupo mientras se descargaba. No se creo la imagen y no se te cobro nada."
+  cupo-cero: "No tienes ningun espacio de imagenes asignado. Pideselo a un administrador."
+  mias-vacia: "No tienes ninguna imagen."
+  borrar-confirmacion: "Vas a borrar la imagen {id}. Los mapas que la usen se quedaran en blanco. Repite el comando con \"confirmar\" al final."
+  borrar-confirmacion-compartida: "Vas a soltar la imagen {id}. Otros jugadores la tienen, asi que sus mapas seguiran funcionando. Repite el comando con \"confirmar\" al final."
+  borrada: "Imagen borrada. Te queda {usados} de {limite} en uso."
+  no-existe: "No existe ninguna imagen con ese id."
+  no-es-tuya: "Esa imagen no es tuya."

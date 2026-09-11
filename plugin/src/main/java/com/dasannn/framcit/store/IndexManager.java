@@ -64,11 +64,31 @@ public class IndexManager {
                 return;
             }
 
+            boolean needsSave = false;
             for (ImageIndexEntry entry : data.getEntries()) {
                 if (entry != null) {
+                    // F11.6: Migración al cargar: una entrada sin lista de poseedores estrena una con su autor dentro.
+                    // Autor desconocido (authorUuid vacío o nulo): sin poseedores, y NO se borra.
+                    if (entry.getRawOwners() == null) {
+                        entry.setOwners(new ArrayList<>());
+                        String authorUuid = entry.getAuthorUuid();
+                        if (authorUuid != null && !authorUuid.isBlank()) {
+                            entry.addOwner(authorUuid);
+                        }
+                        needsSave = true;
+                    }
                     entriesByMapId.put(entry.getMapId(), entry);
                     if (entry.getNormalizedUrl() != null) {
                         entriesByNormalizedUrl.put(entry.getNormalizedUrl(), entry);
+                    }
+                }
+            }
+            if (needsSave) {
+                try {
+                    save();
+                } catch (IOException e) {
+                    if (logger != null) {
+                        logger.warning("Error al guardar index.json tras migración de poseedores: " + e.getMessage());
                     }
                 }
             }

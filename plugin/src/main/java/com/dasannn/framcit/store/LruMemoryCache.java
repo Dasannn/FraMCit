@@ -131,6 +131,11 @@ public class LruMemoryCache {
         return currentBytes;
     }
 
+    public synchronized long getEntryBytes(int mapId) {
+        ConvertedImage img = map.get(mapId);
+        return (img != null) ? calculateSize(img) : 0L;
+    }
+
     public long getMaxBytes() {
         return maxBytes;
     }

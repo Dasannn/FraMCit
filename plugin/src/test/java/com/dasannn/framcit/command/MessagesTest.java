@@ -72,6 +72,26 @@ class MessagesTest {
         assertEquals("No se pudo procesar el pago. Avisa al staff.", Messages.ECONOMY_PAYMENT_FAILED);
         assertEquals("No tienes suficiente dinero. Cuesta 10 $ y tienes 2 $.", Messages.insufficientFunds("10 $", "2 $"));
         assertEquals("Se te han cobrado 10 $ por la imagen.", Messages.chargeSuccess("10 $"));
+
+        // Spec 003 Sección 9
+        assertEquals("Ya tienes {usados} de {limite} imagenes. Borra una con /imagen borrar <id> o mira las tuyas con /imagen mias.", Messages.QUOTA_FULL_REQUEST);
+        assertEquals("Esa imagen tiene {frames} frames y tu limite es {limite}. No se te cobro nada.", Messages.QUOTA_TOO_MANY_FRAMES);
+        assertEquals("Llenaste tu cupo mientras se descargaba. No se creo la imagen y no se te cobro nada.", Messages.QUOTA_FULL_DELIVERY);
+        assertEquals("No tienes ningun espacio de imagenes asignado. Pideselo a un administrador.", Messages.QUOTA_DEFAULT_ZERO);
+        assertEquals("No tienes ninguna imagen.", Messages.QUOTA_MY_LIST_EMPTY);
+        assertEquals("Vas a borrar la imagen {id}. Los mapas que la usen se quedaran en blanco. Repite el comando con \"confirmar\" al final.", Messages.QUOTA_DELETE_CONFIRM);
+        assertEquals("Vas a soltar la imagen {id}. Otros jugadores la tienen, asi que sus mapas seguiran funcionando. Repite el comando con \"confirmar\" al final.", Messages.QUOTA_DELETE_CONFIRM_SHARED);
+        assertEquals("Imagen borrada. Te queda {usados} de {limite} en uso.", Messages.QUOTA_DELETED);
+        assertEquals("No existe ninguna imagen con ese id.", Messages.QUOTA_ID_NOT_FOUND);
+        assertEquals("Esa imagen no es tuya.", Messages.QUOTA_ID_NOT_OWNED);
+
+        assertEquals("Ya tienes 3 de 3 imagenes. Borra una con /imagen borrar <id> o mira las tuyas con /imagen mias.", Messages.quotaFullRequest(3, 3));
+        assertEquals("Esa imagen tiene 50 frames y tu limite es 25. No se te cobro nada.", Messages.quotaTooManyFrames(50, 25));
+        assertEquals("Vas a borrar la imagen 5. Los mapas que la usen se quedaran en blanco. Repite el comando con \"confirmar\" al final.", Messages.quotaDeleteConfirm(5));
+        assertEquals("Vas a soltar la imagen 5. Otros jugadores la tienen, asi que sus mapas seguiran funcionando. Repite el comando con \"confirmar\" al final.", Messages.quotaDeleteConfirmShared(5));
+        assertEquals("Imagen borrada. Te queda 2 de 3 en uso.", Messages.quotaDeleted(5, 2, 3));
+        assertEquals("No existe ninguna imagen con ese id.", Messages.quotaIdNotFound(99));
+        assertEquals("Esa imagen no es tuya.", Messages.quotaIdNotOwned(99));
     }
 
     @Test
@@ -161,6 +181,17 @@ class MessagesTest {
               cobro-correcto: "Cobrado: {precio}."
               saldo-perdido: "Sin saldo final."
               fallo-pago: "Error cobro."
+            cupos:
+              cupo-lleno-al-pedir: "Custom lleno {usados}/{limite}."
+              cupo-demasiados-frames: "Custom frames {frames}/{limite}."
+              cupo-lleno-al-entregar: "Custom lleno al entregar."
+              cupo-cero: "Custom cupo cero."
+              mias-vacia: "Custom vacia."
+              borrar-confirmacion: "Custom confirmacion {id}."
+              borrar-confirmacion-compartida: "Custom compartida {id}."
+              borrada: "Custom borrada {id}."
+              no-existe: "Custom no existe {id}."
+              no-es-tuya: "Custom no tuya {id}."
             """;
 
         Messages.load(new StringReader(yaml), logger);
@@ -182,6 +213,17 @@ class MessagesTest {
         assertEquals("Cobrado: {precio}.", Messages.ECONOMY_CHARGE_SUCCESS);
         assertEquals("Sin saldo final.", Messages.ECONOMY_FUNDS_LOST);
         assertEquals("Error cobro.", Messages.ECONOMY_PAYMENT_FAILED);
+
+        assertEquals("Custom lleno {usados}/{limite}.", Messages.QUOTA_FULL_REQUEST);
+        assertEquals("Custom frames {frames}/{limite}.", Messages.QUOTA_TOO_MANY_FRAMES);
+        assertEquals("Custom lleno al entregar.", Messages.QUOTA_FULL_DELIVERY);
+        assertEquals("Custom cupo cero.", Messages.QUOTA_DEFAULT_ZERO);
+        assertEquals("Custom vacia.", Messages.QUOTA_MY_LIST_EMPTY);
+        assertEquals("Custom confirmacion {id}.", Messages.QUOTA_DELETE_CONFIRM);
+        assertEquals("Custom compartida {id}.", Messages.QUOTA_DELETE_CONFIRM_SHARED);
+        assertEquals("Custom borrada {id}.", Messages.QUOTA_DELETED);
+        assertEquals("Custom no existe {id}.", Messages.QUOTA_ID_NOT_FOUND);
+        assertEquals("Custom no tuya {id}.", Messages.QUOTA_ID_NOT_OWNED);
 
         assertTrue(handler.records.isEmpty(), "No debe haber advertencias si todas las claves están presentes");
     }

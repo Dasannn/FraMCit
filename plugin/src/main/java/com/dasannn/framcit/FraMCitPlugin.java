@@ -23,6 +23,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import com.dasannn.framcit.quota.QuotaService;
+
 import java.io.File;
 import java.time.Duration;
 
@@ -30,6 +32,7 @@ public final class FraMCitPlugin extends JavaPlugin {
 
     private FraMCitConfig pluginConfig;
     private EconomyService economyService;
+    private QuotaService quotaService;
     private DownloadQueue downloadQueue;
     private Downloader downloader;
     private ImageService imageService;
@@ -81,6 +84,7 @@ public final class FraMCitPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new FraMCitAnimationListener(animationManager), this);
 
         this.imageService = new ImageService(downloader, downloadQueue);
+        this.quotaService = new QuotaService(imageStore, () -> pluginConfig);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             ImageCommand.register(event.registrar(), this, imageService, imageStore);
@@ -196,5 +200,9 @@ public final class FraMCitPlugin extends JavaPlugin {
 
     public EconomyService getEconomyService() {
         return economyService;
+    }
+
+    public QuotaService getQuotaService() {
+        return quotaService;
     }
 }

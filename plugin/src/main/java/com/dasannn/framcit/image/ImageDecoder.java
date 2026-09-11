@@ -76,16 +76,31 @@ public final class ImageDecoder {
     }
 
     /**
-     * Decodifica los bytes dados en una {@link DecodedImage}.
+     * Decodifica los bytes dados en una {@link DecodedImage} utilizando el límite global por defecto.
      *
      * @param data bytes crudos del archivo descargado
      * @return imagen decodificada con sus frames y retardos normalizados
      * @throws ImageValidationException si el formato no esta soportado, supera limites o esta corrupto
      */
     public static DecodedImage decode(byte[] data) {
+        return decode(data, maxFrames);
+    }
+
+    /**
+     * Decodifica los bytes dados aplicando un límite específico de frames por petición (F11.9, F11.8).
+     * El límite efectivo nunca supera el límite global de seguridad (Constitution 6.6).
+     *
+     * @param data bytes crudos del archivo descargado
+     * @param maxAllowedFrames límite de frames permitido para esta petición
+     * @return imagen decodificada con sus frames y retardos normalizados
+     * @throws ImageValidationException si el formato no esta soportado, supera limites o esta corrupto
+     */
+    public static DecodedImage decode(byte[] data, int maxAllowedFrames) {
         if (data == null || data.length == 0) {
             throw new ImageValidationException(Messages.ERROR_NOT_AN_IMAGE);
         }
+
+        int effectiveLimit = (maxAllowedFrames > 0) ? Math.min(maxAllowedFrames, maxFrames) : maxFrames;
 
         ImageFormat format = FormatSniffer.sniff(data)
                 .orElseThrow(() -> new ImageValidationException(Messages.ERROR_UNSUPPORTED_FORMAT));
@@ -153,16 +168,20 @@ public final class ImageDecoder {
                         declaredFrames = reader.getNumImages(true);
                     } catch (Exception ignored) {}
 
-                    if (declaredFrames > maxFrames) {
-                        throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
+                    if (declaredFrames > effectiveLimit) {
+                        if (effectiveLimit < maxFrames) {
+                            throw new TooManyFramesException(declaredFrames, effectiveLimit);
+                        } else {
+                            throw new TooManyFramesException(declaredFrames, effectiveLimit, Messages.ERROR_TOO_MANY_FRAMES);
+                        }
                     }
                 }
 
                 // 3. Decodificación según formato
                 if (format == ImageFormat.GIF) {
-                    return decodeGif(reader, canvasWidth, canvasHeight, declaredFrames);
+                    return decodeGif(reader, canvasWidth, canvasHeight, declaredFrames, effectiveLimit);
                 } else if (format == ImageFormat.WEBP) {
-                    return decodeWebP(reader, declaredFrames);
+                    return decodeWebP(reader, declaredFrames, effectiveLimit);
                 } else {
                     return decodeStatic(reader, format, width, height);
                 }
@@ -185,13 +204,18 @@ public final class ImageDecoder {
         return new DecodedImage(format, List.of(frame), width, height);
     }
 
-    private static DecodedImage decodeWebP(ImageReader reader, int declaredFrames) throws IOException {
+    private static DecodedImage decodeWebP(ImageReader reader, int declaredFrames, int limitFrames) throws IOException {
         List<ImageFrame> frames = new ArrayList<>();
         int limit = (declaredFrames > 0) ? declaredFrames : Integer.MAX_VALUE;
 
         for (int i = 0; i < limit; i++) {
-            if (frames.size() >= maxFrames) {
-                throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
+            if (frames.size() >= limitFrames) {
+                int total = (declaredFrames > 0) ? declaredFrames : limitFrames + 1;
+                if (limitFrames < maxFrames) {
+                    throw new TooManyFramesException(total, limitFrames);
+                } else {
+                    throw new TooManyFramesException(total, limitFrames, Messages.ERROR_TOO_MANY_FRAMES);
+                }
             }
             BufferedImage frameImg;
             try {
@@ -223,7 +247,7 @@ public final class ImageDecoder {
         return new DecodedImage(ImageFormat.WEBP, frames, w, h);
     }
 
-    private static DecodedImage decodeGif(ImageReader reader, int canvasWidth, int canvasHeight, int declaredFrames) throws IOException {
+    private static DecodedImage decodeGif(ImageReader reader, int canvasWidth, int canvasHeight, int declaredFrames, int limitFrames) throws IOException {
         List<ImageFrame> frames = new ArrayList<>();
         int limit = (declaredFrames > 0) ? declaredFrames : Integer.MAX_VALUE;
 
@@ -231,8 +255,13 @@ public final class ImageDecoder {
         BufferedImage previousSnapshot = null;
 
         for (int i = 0; i < limit; i++) {
-            if (frames.size() >= maxFrames) {
-                throw new ImageValidationException(Messages.ERROR_TOO_MANY_FRAMES);
+            if (frames.size() >= limitFrames) {
+                int total = (declaredFrames > 0) ? declaredFrames : limitFrames + 1;
+                if (limitFrames < maxFrames) {
+                    throw new TooManyFramesException(total, limitFrames);
+                } else {
+                    throw new TooManyFramesException(total, limitFrames, Messages.ERROR_TOO_MANY_FRAMES);
+                }
             }
 
             BufferedImage rawFrame;
