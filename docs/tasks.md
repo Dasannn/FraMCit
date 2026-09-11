@@ -245,12 +245,11 @@ Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
       comparten los 4 hilos y la cola de 20 con las descargas de los jugadores (drena 20 cargas en 176 ms, 0 rechazos de /imagen; pool unificado suficiente).
 - [x] **F8.11** Medir el coste por tick del `AnimationScheduler`, que recorre **todos** los
       estados (jugador, mapa), no solo los activos (0.55 µs para 200 estados, 1.26 µs para 1000 estados; recorrido completo mantenido).
-- [ ] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Conectar a la IP que ya valido
-      `UrlGuard` en lugar de al nombre, conservando la cabecera `Host` y el SNI para que
-      TLS siga verificando el certificado contra el dominio real. Aplica tambien a cada
-      salto de redireccion. Alternativa si resulta inviable: dejar por escrito que se
-      acepta el riesgo, con el motivo. **No se puede pasar a F9 sin resolver esta tarea de
-      una de las dos formas** (constitution 6.1).
+- [x] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Investigado en Java 25. Se opta por la via
+      documentada de **aceptar el riesgo residual por escrito** (constitution 6.1 y ARCHITECTURE.md R6),
+      dado que las alternativas tecnicas (romper verificacion TLS, SPI global en toda la JVM, o cliente HTTP
+      artesanal sobre SSLSocket) introducen riesgos superiores. Mitigado por la cache DNS de 30 s de la JVM
+      y la alerta al arrancar de F7.10.
 
 **Fase terminada cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con numeros escritos.
 

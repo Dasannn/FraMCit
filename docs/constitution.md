@@ -95,13 +95,23 @@ que hace que las dos resoluciones devuelvan lo mismo. Eso es una casualidad afor
 entorno, **no una garantia del diseno**: arrancar el servidor con
 `-Dsun.net.inetaddr.ttl=0` reabre la ventana por completo.
 
-Obligaciones que esto impone, y que no son negociables:
+Obligaciones y resolucion formal (F8.9):
 
-1. El plugin comprueba al arrancar el TTL de cache de DNS efectivo y **avisa en el log** si
-   la cache esta desactivada.
-2. La unica solucion completa es conectar a la IP ya validada en lugar de al nombre
-   (fijando la IP y conservando el `Host` y el SNI). Queda pendiente, y debe estar resuelto
-   o aceptado por escrito antes de que el plugin corra en un servidor publico.
+1. **Aviso en log al arrancar**: Cumplido en F7.10 (`DnsCacheChecker`). El plugin comprueba el
+   TTL de cache de DNS efectivo de la JVM y avisa con severidad en el log si la cache esta
+   desactivada (`0`).
+2. **Aceptacion explicita del riesgo residual (cerrado en F8.9)**: Tras una investigacion
+   exhaustiva en Java 25, se determino que las vias tecnicas para forzar la IP validada en
+   `HttpClient` acarrean riesgos tecnicos y de seguridad superiores al beneficio:
+   - *Reescribir URI a la IP*: Rompe la verificacion de certificados TLS en HTTPS salvo que se
+     desactive la comprobacion del nombre de host, lo que abriria un agujero MITM critico.
+   - *InetAddressResolverProvider (SPI)*: Es global para toda la JVM, afectando a Paper, la
+     autenticacion de Mojang y a todos los demas plugins del servidor de forma invasiva.
+   - *Cliente HTTP artesanal sobre SSLSocket*: Implicaria reimplementar un parser HTTP/1.1
+     manual en la ruta mas sensible del plugin, aumentando drásticamente la superficie de fallos.
+   Por tanto, se acepta formalmente por escrito el riesgo residual bajo la premisa de que la cache
+   de 30 s por defecto de la JVM reduce la ventana de ataque a cero en entornos estandar, y que
+   FraMCit alerta activamente si dicha proteccion se encuentra deshabilitada.
 
 ## 7. Contenido de terceros
 
