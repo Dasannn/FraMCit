@@ -24,26 +24,58 @@ Owner y unica autoridad de producto: el propietario del repositorio.
 
 ## 3. Alcance
 
-Un solo spec por ahora: el plugin de imagenes en marcos.
+Dos specs:
+
+- **Spec 001** (`docs/spec.md`): imagenes y GIFs en marcos.
+- **Spec 002** (`docs/spec-002-economia.md`): cobro opcional por imagen mediante Vault.
 
 Dentro del alcance:
 - Comando que entrega al jugador un item mapa con la imagen de una URL.
 - Soporte de imagenes estaticas y de GIF animado.
 - Animacion de GIF unicamente para jugadores que miran el marco.
 - Persistencia: las imagenes sobreviven al reinicio del servidor.
+- Cobro opcional por imagen, desactivado mientras no se configure.
 
 Fuera del alcance (requiere aprobacion nueva para entrar):
 - Busqueda de imagenes por palabras clave / integracion con APIs de Google u otras.
 - Mosaicos multi-marco (imagenes de mas de un mapa).
 - Audio, musica o cualquier funcionalidad de sonido.
 - Interfaz web, panel de administracion, base de datos externa.
+- Cualquier trato con dinero que no sea cobrar por crear una imagen: reembolsos manuales,
+  transferencias entre jugadores, precios por rango, ofertas o descuentos temporales.
+
+### 3.1 El plugin funciona solo
+
+Ninguna dependencia externa puede ser obligatoria. FraMCit tiene que arrancar y funcionar
+en un servidor que no tenga Vault, ni plugin de economia, ni gestor de permisos.
+
+El destino de este plugin es un servidor que **todavia no tiene economia**, asi que esto
+no es una hipotesis comoda: es el caso real. Sin economia disponible, las imagenes son
+gratis y el plugin no se queja. El dia que ese servidor monte la suya, el cobro se activa
+poniendo un precio en `config.yml`, sin recompilar nada.
+
+Una dependencia que impida arrancar es un fallo de diseno, no una funcionalidad.
 
 ## 4. Principios de producto
 
 1. **Un comando, un resultado.** El jugador pega un link y recibe un mapa. Sin menus,
    sin GUIs, sin pasos intermedios.
-2. **Acceso abierto.** Cualquier jugador puede usar el comando. Sin cooldown, sin lista
-   blanca de dominios, sin limite de mapas por jugador. Decision explicita del owner.
+2. **Acceso controlado por el servidor, no por el plugin.** El plugin decide *como* se
+   pide permiso, nunca *a quien* se le concede. Declara sus nodos y pregunta por ellos;
+   quien reparte es el administrador con su gestor de permisos.
+
+   El comando viene **cerrado por defecto** (`framcit.imagen` con `default: op`): un
+   servidor recien instalado no deja que cualquiera haga que el servidor descargue de
+   internet. Abrirlo es una decision consciente del administrador, no el punto de partida.
+
+   Lo que sigue sin existir, y no se anade sin aprobacion nueva: cooldown, lista blanca de
+   dominios y limite de mapas por jugador. Quien puede usar el comando se decide fuera;
+   cuanto puede usarlo, no se limita.
+
+   > **Enmienda del 2026-09-10.** Hasta esta fecha el principio era *acceso abierto*
+   > (`default: true`, cualquier jugador). El owner decidio cerrarlo por defecto tras
+   > comprobar el plugin en un servidor real. Lo demas de la decision original —sin
+   > cooldown, sin lista blanca, sin limite de mapas— sigue vigente.
 3. **Lo que cuelgas sigue colgado.** Una imagen colocada en un marco funciona tras
    reiniciar el servidor, indefinidamente, sin intervencion manual.
 4. **Fallar en voz alta.** Si una URL no sirve, el jugador recibe un mensaje claro en

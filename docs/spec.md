@@ -27,9 +27,13 @@ Alias: `/img`, `/image`.
 - Un unico argumento: la URL. Sin flags, sin subcomandos.
 - Solo ejecutable por un jugador. Desde consola responde que el comando requiere un
   jugador (no hay a quien darle el item).
-- Permiso: `framcit.imagen`, por defecto concedido a todos (`default: true`).
-  Existe para que un administrador pueda revocarlo, no para restringir por defecto.
+- Permiso: `framcit.imagen`, por defecto **solo operadores** (`default: op`). El comando
+  viene cerrado y el administrador lo abre a quien quiera con su gestor de permisos.
+  (Cambiado en la enmienda del 2026-09-10; antes era `default: true`. Ver constitution 4.2
+  y `docs/spec-002-economia.md` seccion 7.)
 - Sin cooldown, sin limite de usos por jugador, sin lista blanca de dominios.
+- El uso del comando puede costar dinero del juego si el servidor tiene economia. Ver
+  `docs/spec-002-economia.md`.
 
 ### 2.2 Flujo exitoso
 

@@ -284,6 +284,51 @@ que lo impide.
 
 ---
 
+---
+
+## F10 - Permisos cerrados y cobro por imagen (spec 002)
+
+Rama: `feat/f10-economia` - Worktree: `../framcit-f10-economia`
+
+Implementa `docs/spec-002-economia.md` y la enmienda de la constitution 4.2.
+Independiente de F9: no comparten codigo.
+
+- [ ] **F10.1** `framcit.imagen` pasa a `default: op` en `paper-plugin.yml`.
+- [ ] **F10.2** Declarar `framcit.gratis` con `default: false`.
+- [ ] **F10.3** Vault como dependencia **blanda** (`soft-depend`), nunca obligatoria.
+      El plugin debe arrancar y funcionar sin Vault instalado.
+- [ ] **F10.4** Capa de economia que resuelve el servicio de Vault al arrancar y tolera
+      las tres ausencias: sin Vault, con Vault pero sin plugin de economia, y con precio
+      cero. En los tres casos las imagenes son gratis.
+- [ ] **F10.5** Una sola linea en el log al arrancar diciendo si el cobro esta activo y
+      por que. Informativa, no un aviso: no tener economia es normal.
+- [ ] **F10.6** `economia.precio-por-imagen` en `config.yml`, por defecto 0. Negativo o
+      invalido se trata como cero, con aviso. El plugin nunca da dinero.
+- [ ] **F10.7** Comprobar saldo **antes** de descargar. Sin saldo, no se descarga nada.
+- [ ] **F10.8** Cobrar **al entregar** el mapa, nunca antes. Si algo falla, no se cobra.
+- [ ] **F10.9** Saldo perdido entre la comprobacion y el cobro: no se entrega el mapa, se
+      explica por que y se descarta lo creado.
+- [ ] **F10.10** Fallo del plugin de economia al cobrar: no se entrega el mapa, traza
+      completa al log y mensaje generico al jugador.
+- [ ] **F10.11** Acierto de cache: se cobra el precio completo, con comprobacion de saldo
+      previa aunque no haya descarga.
+- [ ] **F10.12** `framcit.gratis`: ni se comprueba saldo ni se menciona el precio.
+- [ ] **F10.13** Mensajes del spec 002 seccion 8 en `messages.yml`. Cuando el cobro esta
+      desactivado no debe aparecer ninguno.
+- [ ] **F10.14** El log obligatorio incorpora el importe cobrado, o `gratis`.
+- [ ] **F10.15** Que el precio se muestre con el formato del plugin de economia, no con
+      uno inventado por FraMCit.
+- [ ] **F10.16** Tests: sin Vault, con Vault sin economia, precio 0, precio configurado,
+      saldo justo, saldo insuficiente, saldo perdido a mitad, fallo de la economia,
+      acierto de cache, y jugador exento.
+- [ ] **F10.17** Prueba manual con Vault y un plugin de economia reales en el servidor
+      local, repasando los 11 criterios de aceptacion del spec 002.
+
+**Fase terminada cuando**: los 11 criterios del spec 002 se cumplen, y el plugin sigue
+arrancando y funcionando en un servidor sin Vault.
+
+---
+
 ## Resumen
 
 | Fase | Tareas | Depende de |
@@ -298,5 +343,6 @@ que lo impide.
 | F7 config y admin | 10 | F6 |
 | F8 rendimiento | 11 | F7 |
 | F9 Aternos | 6 | F8 |
+| F10 economia (spec 002) | 17 | F7 |
 
-Total: 111 tareas.
+Total: 128 tareas.
