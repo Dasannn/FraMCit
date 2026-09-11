@@ -18,7 +18,7 @@ public class LruMemoryCache {
 
     public static final long DEFAULT_MAX_BYTES = 128L * 1024L * 1024L; // 128 MB
 
-    private final long maxBytes;
+    private long maxBytes;
     private long currentBytes = 0;
     private final Map<Integer, ConvertedImage> map;
 
@@ -33,6 +33,25 @@ public class LruMemoryCache {
         this.maxBytes = maxBytes;
         // accessOrder = true habilita el ordenamiento LRU
         this.map = new LinkedHashMap<>(16, 0.75f, true);
+    }
+
+    /**
+     * Actualiza el límite máximo de memoria en bytes al vuelo.
+     * Desaloja elementos si el uso actual supera el nuevo límite.
+     */
+    public synchronized void setMaxBytes(long newMaxBytes) {
+        if (newMaxBytes <= 0) {
+            throw new IllegalArgumentException("maxBytes must be positive: " + newMaxBytes);
+        }
+        this.maxBytes = newMaxBytes;
+        while (currentBytes > this.maxBytes && !map.isEmpty()) {
+            Iterator<Map.Entry<Integer, ConvertedImage>> iterator = map.entrySet().iterator();
+            if (iterator.hasNext()) {
+                Map.Entry<Integer, ConvertedImage> eldest = iterator.next();
+                currentBytes -= calculateSize(eldest.getValue());
+                iterator.remove();
+            }
+        }
     }
 
     /**
