@@ -1,18 +1,24 @@
 package com.dasannn.framcit.command;
 
 import com.dasannn.framcit.FraMCitPlugin;
+import com.dasannn.framcit.config.FraMCitConfig;
 import com.dasannn.framcit.economy.ChargeResult;
 import com.dasannn.framcit.economy.EconomyCheckResult;
 import com.dasannn.framcit.economy.EconomyService;
 import com.dasannn.framcit.economy.NoOpEconomyService;
 import com.dasannn.framcit.image.ConvertedFrame;
+import com.dasannn.framcit.image.TooManyFramesException;
+import com.dasannn.framcit.quota.PermissionTier;
+import com.dasannn.framcit.quota.QuotaService;
 import com.dasannn.framcit.render.FraMCitRenderer;
 import com.dasannn.framcit.render.GazeTracker;
+import com.dasannn.framcit.render.PlayerMapState;
 import com.dasannn.framcit.service.ImageProcessResult;
 import com.dasannn.framcit.service.ImageService;
 import com.dasannn.framcit.store.FmcFormat;
 import com.dasannn.framcit.store.ImageIndexEntry;
 import com.dasannn.framcit.store.ImageStore;
+import com.dasannn.framcit.store.LruMemoryCache;
 import com.dasannn.framcit.store.UrlNormalizer;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -23,6 +29,7 @@ import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
@@ -32,6 +39,8 @@ import org.bukkit.map.MapView;
 import org.bukkit.util.RayTraceResult;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.logging.Level;
 
 public final class ImageCommand {
@@ -58,7 +68,7 @@ public final class ImageCommand {
     }
 
     public static LiteralCommandNode<CommandSourceStack> createCommandNode(FraMCitPlugin plugin, ImageService imageService, ImageStore imageStore) {
-        return createCommandNode(plugin, imageService, imageStore, null);
+        return createCommandNode(plugin, imageService, imageStore, null, null);
     }
 
     public static LiteralCommandNode<CommandSourceStack> createCommandNode(
@@ -66,6 +76,16 @@ public final class ImageCommand {
         ImageService imageService,
         ImageStore imageStore,
         EconomyService fallbackEconomyService
+    ) {
+        return createCommandNode(plugin, imageService, imageStore, fallbackEconomyService, null);
+    }
+
+    public static LiteralCommandNode<CommandSourceStack> createCommandNode(
+        FraMCitPlugin plugin,
+        ImageService imageService,
+        ImageStore imageStore,
+        EconomyService fallbackEconomyService,
+        QuotaService fallbackQuotaService
     ) {
         return Commands.literal("imagen")
             .executes(ctx -> {
@@ -126,23 +146,116 @@ public final class ImageCommand {
                     })
                 )
             )
-            // Subcomando: /imagen listar [pagina] (F7.8)
+            // Subcomando: /imagen mias (F11.15)
+            .then(Commands.literal("mias")
+                .requires(source -> source.getSender().hasPermission("framcit.imagen"))
+                .executes(ctx -> handleMias(ctx.getSource().getSender(), plugin, imageStore, fallbackQuotaService))
+            )
+            // Subcomando: /imagen borrar <id> [confirmar] (F11.16, F11.17)
+            .then(Commands.literal("borrar")
+                .requires(source -> source.getSender().hasPermission("framcit.imagen"))
+                .executes(ctx -> {
+                    ctx.getSource().getSender().sendMessage(Component.text("Uso: /imagen borrar <id> [confirmar]"));
+                    return Command.SINGLE_SUCCESS;
+                })
+                .then(Commands.argument("id", IntegerArgumentType.integer())
+                    .executes(ctx -> handleBorrar(ctx.getSource().getSender(), IntegerArgumentType.getInteger(ctx, "id"), false, plugin, imageStore, fallbackQuotaService))
+                    .then(Commands.literal("confirmar")
+                        .executes(ctx -> handleBorrar(ctx.getSource().getSender(), IntegerArgumentType.getInteger(ctx, "id"), true, plugin, imageStore, fallbackQuotaService))
+                    )
+                )
+            )
+            // Subcomando: /imagen listar [jugador] [pagina] (F7.8, F11.18)
             .then(Commands.literal("listar")
                 .requires(source -> source.getSender().hasPermission("framcit.admin"))
-                .executes(ctx -> handleList(ctx.getSource().getSender(), 1, imageStore))
-                .then(Commands.argument("pagina", IntegerArgumentType.integer())
+                .executes(ctx -> handleList(ctx.getSource().getSender(), null, 1, imageStore, fallbackQuotaService))
+                .then(Commands.argument("arg1", StringArgumentType.word())
                     .suggests((ctx, builder) -> {
-                        int total = (imageStore != null) ? imageStore.getIndexManager().size() : 0;
+                        if (imageStore == null) return builder.buildFuture();
+                        int total = imageStore.getIndexManager().size();
                         int totalPages = Math.max(1, (int) Math.ceil((double) total / ITEMS_PER_PAGE));
                         for (int i = 1; i <= totalPages; i++) {
                             builder.suggest(String.valueOf(i));
                         }
+                        if (Bukkit.getServer() != null) {
+                            try {
+                                for (Player p : Bukkit.getOnlinePlayers()) {
+                                    if (p != null && p.getName() != null) {
+                                        builder.suggest(p.getName());
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                        }
                         return builder.buildFuture();
                     })
                     .executes(ctx -> {
-                        int page = IntegerArgumentType.getInteger(ctx, "pagina");
-                        return handleList(ctx.getSource().getSender(), page, imageStore);
+                        String arg = StringArgumentType.getString(ctx, "arg1");
+                        try {
+                            int page = Integer.parseInt(arg);
+                            return handleList(ctx.getSource().getSender(), null, page, imageStore, fallbackQuotaService);
+                        } catch (NumberFormatException e) {
+                            return handleList(ctx.getSource().getSender(), arg, 1, imageStore, fallbackQuotaService);
+                        }
                     })
+                    .then(Commands.argument("pagina", IntegerArgumentType.integer())
+                        .suggests((ctx, builder) -> {
+                            for (int i = 1; i <= 10; i++) {
+                                builder.suggest(String.valueOf(i));
+                            }
+                            return builder.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            String playerArg = StringArgumentType.getString(ctx, "arg1");
+                            int page = IntegerArgumentType.getInteger(ctx, "pagina");
+                            return handleList(ctx.getSource().getSender(), playerArg, page, imageStore, fallbackQuotaService);
+                        })
+                    )
+                )
+            )
+            // Subcomando: /imagen uso [jugador] (F11.19)
+            .then(Commands.literal("uso")
+                .requires(source -> source.getSender().hasPermission("framcit.admin"))
+                .executes(ctx -> handleUso(ctx.getSource().getSender(), null, plugin, imageStore, fallbackQuotaService))
+                .then(Commands.argument("jugador", StringArgumentType.word())
+                    .suggests((ctx, builder) -> {
+                        if (Bukkit.getServer() != null) {
+                            try {
+                                for (Player p : Bukkit.getOnlinePlayers()) {
+                                    if (p != null && p.getName() != null) {
+                                        builder.suggest(p.getName());
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                        return builder.buildFuture();
+                    })
+                    .executes(ctx -> handleUso(ctx.getSource().getSender(), StringArgumentType.getString(ctx, "jugador"), plugin, imageStore, fallbackQuotaService))
+                )
+            )
+            // Subcomando: /imagen purgar-jugador <jugador> [confirmar] (F11.20)
+            .then(Commands.literal("purgar-jugador")
+                .requires(source -> source.getSender().hasPermission("framcit.admin"))
+                .executes(ctx -> {
+                    ctx.getSource().getSender().sendMessage(Component.text("Uso: /imagen purgar-jugador <jugador> [confirmar]"));
+                    return Command.SINGLE_SUCCESS;
+                })
+                .then(Commands.argument("jugador", StringArgumentType.word())
+                    .suggests((ctx, builder) -> {
+                        if (Bukkit.getServer() != null) {
+                            try {
+                                for (Player p : Bukkit.getOnlinePlayers()) {
+                                    if (p != null && p.getName() != null) {
+                                        builder.suggest(p.getName());
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                        return builder.buildFuture();
+                    })
+                    .executes(ctx -> handlePurgarJugador(ctx.getSource().getSender(), StringArgumentType.getString(ctx, "jugador"), false, plugin, imageStore, fallbackQuotaService))
+                    .then(Commands.literal("confirmar")
+                        .executes(ctx -> handlePurgarJugador(ctx.getSource().getSender(), StringArgumentType.getString(ctx, "jugador"), true, plugin, imageStore, fallbackQuotaService))
+                    )
                 )
             )
             // Argumento: /imagen <url> (Spec 2.1)
@@ -150,14 +263,14 @@ public final class ImageCommand {
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
                     String url = StringArgumentType.getString(ctx, "url");
-                    return handleImage(sender, url, plugin, imageService, imageStore, fallbackEconomyService);
+                    return handleImage(sender, url, plugin, imageService, imageStore, fallbackEconomyService, fallbackQuotaService);
                 })
             )
             .build();
     }
 
     /**
-     * Maneja la ejecución de /imagen <url> (F4.1, F5.5, F10.7, F10.11).
+     * Maneja la ejecución de /imagen <url> (F4.1, F5.5, F10.7, F10.11, F11.8, F11.10, F11.11, F11.12).
      */
     public static int handleImage(
         CommandSender sender,
@@ -167,18 +280,39 @@ public final class ImageCommand {
         ImageStore imageStore,
         EconomyService fallbackEconomyService
     ) {
+        return handleImage(sender, rawUrl, plugin, imageService, imageStore, fallbackEconomyService, null);
+    }
+
+    public static int handleImage(
+        CommandSender sender,
+        String rawUrl,
+        FraMCitPlugin plugin,
+        ImageService imageService,
+        ImageStore imageStore,
+        EconomyService fallbackEconomyService,
+        QuotaService fallbackQuotaService
+    ) {
         String url = rawUrl != null ? rawUrl.trim() : "";
 
-        // Interceptar si un usuario sin framcit.admin intentó escribir un subcomando
+        // Interceptar si un usuario sin permisos intentó escribir un subcomando
         String urlLower = url.toLowerCase(Locale.ROOT);
         if (urlLower.equals("recargar") || urlLower.equals("info")
-            || urlLower.startsWith("purgar") || urlLower.startsWith("listar")) {
+            || urlLower.startsWith("purgar ") || urlLower.equals("purgar")
+            || urlLower.startsWith("listar") || urlLower.startsWith("uso")
+            || urlLower.startsWith("purgar-jugador")) {
             if (!sender.hasPermission("framcit.admin")) {
                 sender.sendMessage(Component.text(Messages.NO_PERMISSION));
                 return Command.SINGLE_SUCCESS;
             }
         }
+        if (urlLower.equals("mias") || urlLower.startsWith("borrar")) {
+            if (!sender.hasPermission("framcit.imagen")) {
+                sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+                return Command.SINGLE_SUCCESS;
+            }
+        }
 
+        // Paso 1: Permiso framcit.imagen
         if (!sender.hasPermission("framcit.imagen")) {
             sender.sendMessage(Component.text(Messages.NO_PERMISSION));
             return Command.SINGLE_SUCCESS;
@@ -193,7 +327,7 @@ public final class ImageCommand {
             return Command.SINGLE_SUCCESS;
         }
 
-        // F5.4: Normalización de URL para la clave de cache
+        // Normalización de URL para la clave de cache
         String normalizedUrl;
         try {
             normalizedUrl = UrlNormalizer.normalize(url);
@@ -202,29 +336,56 @@ public final class ImageCommand {
             return Command.SINGLE_SUCCESS;
         }
 
-        // Obtener servicio de economía activo o fallback (F10.4)
+        QuotaService quota = resolveQuotaService(plugin, imageStore, fallbackQuotaService);
+
+        // Paso 2: Slot disponible (Spec 003 Sección 4, F11.8, F11.10).
+        // Sin slot, se corta aquí: no se comprueba saldo, no se descarga nada, no se cobra nada.
+        // Regla 2.3 (URL que ya posees) se evalúa aquí: canAcquireImage retorna true si ya la posee (F11.12).
+        if (quota != null) {
+            int maxSlots = quota.getMaxSlots(player);
+            if (maxSlots == 0 && !quota.isOwnerOfUrl(player.getUniqueId(), normalizedUrl)) {
+                player.sendMessage(Component.text(Messages.QUOTA_DEFAULT_ZERO));
+                return Command.SINGLE_SUCCESS;
+            }
+            if (!quota.canAcquireImage(player, normalizedUrl)) {
+                int used = quota.getUsedSlots(player.getUniqueId());
+                player.sendMessage(Component.text(Messages.quotaFullRequest(used, maxSlots)));
+                return Command.SINGLE_SUCCESS;
+            }
+        }
+
+        int effectiveMaxFrames = (quota != null)
+            ? quota.getEffectiveMaxFrames(player)
+            : (plugin != null ? plugin.getPluginConfig().getMaxFrames() : FraMCitConfig.defaults().getMaxFrames());
+
         EconomyService eco = (plugin != null && plugin.getEconomyService() != null)
             ? plugin.getEconomyService()
             : (fallbackEconomyService != null ? fallbackEconomyService : NoOpEconomyService.INSTANCE);
 
-        // F10.7, F10.11: Comprobar saldo ANTES de descargar o entregar mapa en caché
-        EconomyCheckResult checkResult = eco.checkCanPay(player);
-        if (checkResult instanceof EconomyCheckResult.InsufficientFunds inf) {
-            player.sendMessage(Component.text(Messages.insufficientFunds(inf.formattedPrice(), inf.formattedBalance())));
-            return Command.SINGLE_SUCCESS;
-        }
-
-        // F5.5: Comprobación de cache por URL normalizada antes de encolar descarga.
+        // Paso 3: Acierto de cache (F11.11). El recuento de frames se conoce sin descargar nada.
         if (imageStore != null) {
             ImageIndexEntry cached = imageStore.findByNormalizedUrl(normalizedUrl);
             if (cached != null && !cached.isOrphan()) {
+                // Comprobación de cupo de frames antes de descargar y antes de mirar saldo
+                if (cached.getFrameCount() > effectiveMaxFrames) {
+                    player.sendMessage(Component.text(Messages.quotaTooManyFrames(cached.getFrameCount(), effectiveMaxFrames)));
+                    return Command.SINGLE_SUCCESS;
+                }
+
                 MapView existingMap = null;
                 try {
                     existingMap = Bukkit.getMap(cached.getMapId());
                 } catch (Throwable ignored) {}
 
                 if (existingMap != null) {
-                    deliverCachedMap(plugin, eco, player, url, cached, existingMap, imageStore);
+                    // Paso 4: Saldo suficiente (spec 002)
+                    EconomyCheckResult checkResult = eco.checkCanPay(player);
+                    if (checkResult instanceof EconomyCheckResult.InsufficientFunds inf) {
+                        player.sendMessage(Component.text(Messages.insufficientFunds(inf.formattedPrice(), inf.formattedBalance())));
+                        return Command.SINGLE_SUCCESS;
+                    }
+
+                    deliverCachedMap(plugin, eco, quota, player, url, cached, existingMap, imageStore);
                     return Command.SINGLE_SUCCESS;
                 } else {
                     if (plugin != null) {
@@ -236,20 +397,27 @@ public final class ImageCommand {
             }
         }
 
+        // Paso 4: Saldo suficiente antes de descargar (Spec 002, F10.7)
+        EconomyCheckResult checkResult = eco.checkCanPay(player);
+        if (checkResult instanceof EconomyCheckResult.InsufficientFunds inf) {
+            player.sendMessage(Component.text(Messages.insufficientFunds(inf.formattedPrice(), inf.formattedBalance())));
+            return Command.SINGLE_SUCCESS;
+        }
+
         // F4.9: Mensaje inmediato de "Descargando imagen..." solo en caso de cache miss
         player.sendMessage(Component.text(Messages.DOWNLOADING));
 
-        // F4.1: Encadenar descarga, decodificación y conversión en el pool asíncrono
+        // Paso 5: Descarga y decodificación con effectiveMaxFrames resuelto en hilo principal (F11.8)
         if (imageService != null) {
-            imageService.process(url)
+            imageService.process(url, effectiveMaxFrames)
                 .thenAccept(result -> {
-                    // F4.2: Salto explícito de vuelta al hilo principal
+                    // Salto explícito de vuelta al hilo principal
                     if (plugin != null) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
-                            handleResult(plugin, eco, player, url, normalizedUrl, result, imageStore);
+                            handleResult(plugin, eco, quota, player, url, normalizedUrl, result, imageStore);
                         });
                     } else {
-                        handleResult(null, eco, player, url, normalizedUrl, result, imageStore);
+                        handleResult(null, eco, quota, player, url, normalizedUrl, result, imageStore);
                     }
                 });
         }
@@ -447,6 +615,19 @@ public final class ImageCommand {
      * Maneja el subcomando /imagen listar [pagina] (F7.8).
      */
     public static int handleList(CommandSender sender, int page, ImageStore imageStore) {
+        return handleList(sender, null, page, imageStore, null);
+    }
+
+    /**
+     * Maneja el subcomando /imagen listar [jugador] [pagina] (F7.8, F11.18).
+     */
+    public static int handleList(
+        CommandSender sender,
+        String targetPlayerName,
+        int page,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
         if (!sender.hasPermission("framcit.admin")) {
             sender.sendMessage(Component.text(Messages.NO_PERMISSION));
             return Command.SINGLE_SUCCESS;
@@ -457,15 +638,44 @@ public final class ImageCommand {
             return Command.SINGLE_SUCCESS;
         }
 
-        List<ImageIndexEntry> entries = new ArrayList<>(imageStore.getIndexManager().getAllEntries());
+        List<ImageIndexEntry> entries;
+        String quotaHeaderExtra = "";
+
+        if (targetPlayerName != null && !targetPlayerName.isBlank()) {
+            Player onlinePlayer = findOnlinePlayer(targetPlayerName);
+            UUID targetUuid = resolveTargetUuid(targetPlayerName, imageStore);
+
+            final UUID finalUuid = targetUuid;
+            entries = imageStore.getIndexManager().getAllEntries().stream()
+                .filter(e -> (finalUuid != null && e.hasOwner(finalUuid)) || (e.getAuthorName() != null && e.getAuthorName().equalsIgnoreCase(targetPlayerName)))
+                .toList();
+
+            if (entries.isEmpty()) {
+                sender.sendMessage(Component.text(Messages.ADMIN_LIST_EMPTY));
+                return Command.SINGLE_SUCCESS;
+            }
+
+            QuotaService quota = resolveQuotaService(null, imageStore, fallbackQuotaService);
+            if (quota != null && finalUuid != null) {
+                int used = quota.getUsedSlots(finalUuid);
+                String maxStr = (onlinePlayer != null)
+                    ? (quota.isSlotsUnlimited(onlinePlayer) ? "ilimitado" : String.valueOf(quota.getMaxSlots(onlinePlayer)))
+                    : "?";
+                quotaHeaderExtra = String.format(" (Cupo: %d/%s)", used, maxStr);
+            }
+        } else {
+            entries = new ArrayList<>(imageStore.getIndexManager().getAllEntries());
+        }
+
         if (entries.isEmpty()) {
             sender.sendMessage(Component.text(Messages.ADMIN_LIST_EMPTY));
             return Command.SINGLE_SUCCESS;
         }
 
-        entries.sort(Comparator.comparingInt(ImageIndexEntry::getMapId));
+        List<ImageIndexEntry> sortedEntries = new ArrayList<>(entries);
+        sortedEntries.sort(Comparator.comparingInt(ImageIndexEntry::getMapId));
 
-        int totalEntries = entries.size();
+        int totalEntries = sortedEntries.size();
         int totalPages = (int) Math.ceil((double) totalEntries / ITEMS_PER_PAGE);
 
         if (page < 1 || page > totalPages) {
@@ -478,14 +688,18 @@ public final class ImageCommand {
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalEntries);
 
-        sender.sendMessage(Component.text(
-            Messages.ADMIN_LIST_HEADER
-                .replace("{page}", String.valueOf(page))
-                .replace("{total_pages}", String.valueOf(totalPages))
-        ));
+        if (targetPlayerName != null && !targetPlayerName.isBlank()) {
+            sender.sendMessage(Component.text(String.format("--- Imágenes de %s%s (Página %d/%d) ---", targetPlayerName, quotaHeaderExtra, page, totalPages)));
+        } else {
+            sender.sendMessage(Component.text(
+                Messages.ADMIN_LIST_HEADER
+                    .replace("{page}", String.valueOf(page))
+                    .replace("{total_pages}", String.valueOf(totalPages))
+            ));
+        }
 
         for (int i = startIndex; i < endIndex; i++) {
-            ImageIndexEntry e = entries.get(i);
+            ImageIndexEntry e = sortedEntries.get(i);
             String line = Messages.ADMIN_LIST_ITEM
                 .replace("{id}", String.valueOf(e.getMapId()))
                 .replace("{author}", e.getAuthorName() != null ? e.getAuthorName() : "Desconocido")
@@ -495,22 +709,429 @@ public final class ImageCommand {
         }
 
         if (page < totalPages) {
-            sender.sendMessage(Component.text(
-                Messages.ADMIN_LIST_FOOTER
-                    .replace("{next_page}", String.valueOf(page + 1))
-                    .replace("{page}", String.valueOf(page + 1))
-            ));
+            if (targetPlayerName != null && !targetPlayerName.isBlank()) {
+                sender.sendMessage(Component.text(String.format("Usa /imagen listar %s %d para ver más.", targetPlayerName, page + 1)));
+            } else {
+                sender.sendMessage(Component.text(
+                    Messages.ADMIN_LIST_FOOTER
+                        .replace("{next_page}", String.valueOf(page + 1))
+                        .replace("{page}", String.valueOf(page + 1))
+                ));
+            }
         }
 
         return Command.SINGLE_SUCCESS;
     }
 
     /**
-     * Entrega un mapa ya existente desde la cache sin crear un nuevo MapView ni encolar descargas (F5.5).
+     * Maneja el subcomando /imagen mias (F11.15).
+     */
+    public static int handleMias(
+        CommandSender sender,
+        FraMCitPlugin plugin,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
+        if (!sender.hasPermission("framcit.imagen")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+            return Command.SINGLE_SUCCESS;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text(Messages.ONLY_PLAYER));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        QuotaService quota = resolveQuotaService(plugin, imageStore, fallbackQuotaService);
+        if (quota == null) {
+            player.sendMessage(Component.text(Messages.QUOTA_MY_LIST_EMPTY));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        List<ImageIndexEntry> owned = quota.getOwnedImages(player.getUniqueId());
+        if (owned.isEmpty()) {
+            player.sendMessage(Component.text(Messages.QUOTA_MY_LIST_EMPTY));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        List<ImageIndexEntry> sortedOwned = new ArrayList<>(owned);
+        sortedOwned.sort(Comparator.comparingInt(ImageIndexEntry::getMapId));
+
+        int used = quota.getUsedSlots(player.getUniqueId());
+        String maxStr = quota.isSlotsUnlimited(player) ? "ilimitado" : String.valueOf(quota.getMaxSlots(player));
+
+        player.sendMessage(Component.text(String.format("--- Mis imágenes (Usados %d de %s) ---", used, maxStr)));
+
+        for (ImageIndexEntry entry : sortedOwned) {
+            String tipo = entry.getFrameCount() > 1 ? ("animada (" + entry.getFrameCount() + " frames)") : "estática";
+            String date = entry.getCreatedAt() != null ? entry.getCreatedAt() : "-";
+            player.sendMessage(Component.text(String.format("#%d | %s | %s | %s", entry.getMapId(), tipo, date, entry.getOriginalUrl())));
+        }
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * Maneja el subcomando /imagen borrar <id> [confirmar] (F11.16, F11.17).
+     */
+    public static int handleBorrar(
+        CommandSender sender,
+        int id,
+        boolean confirmed,
+        FraMCitPlugin plugin,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
+        if (!sender.hasPermission("framcit.imagen")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+            return Command.SINGLE_SUCCESS;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text(Messages.ONLY_PLAYER));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (imageStore == null) {
+            player.sendMessage(Component.text(Messages.quotaIdNotFound(id)));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        ImageIndexEntry entry = imageStore.findByMapId(id);
+        if (entry == null) {
+            player.sendMessage(Component.text(Messages.quotaIdNotFound(id)));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (!entry.hasOwner(player.getUniqueId())) {
+            player.sendMessage(Component.text(Messages.quotaIdNotOwned(id)));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        QuotaService quota = resolveQuotaService(plugin, imageStore, fallbackQuotaService);
+        boolean shared = (quota != null) && quota.hasOtherOwners(id, player.getUniqueId());
+
+        if (!confirmed) {
+            if (shared) {
+                player.sendMessage(Component.text(Messages.quotaDeleteConfirmShared(id)));
+            } else {
+                player.sendMessage(Component.text(Messages.quotaDeleteConfirm(id)));
+            }
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Ejecutar liberación de cupo
+        if (quota != null) {
+            quota.removeOwnership(id, player.getUniqueId());
+        } else {
+            entry.removeOwner(player.getUniqueId());
+            imageStore.saveIndex();
+        }
+
+        if (!shared) {
+            // Último poseedor: borrar archivo .fmc, desalojar de cache LRU y quitar de index.json
+            imageStore.getLruCache().remove(id);
+            Path fmcPath = imageStore.getImagesFolder().resolve(id + ".fmc");
+            try {
+                Files.deleteIfExists(fmcPath);
+            } catch (Exception ignored) {}
+
+            imageStore.getIndexManager().removeEntry(id);
+            imageStore.saveIndex();
+
+            if (plugin != null && plugin.getAnimationManager() != null) {
+                plugin.getAnimationManager().removeMap(id);
+            }
+
+            try {
+                MapView mapView = Bukkit.getMap(id);
+                if (mapView != null) {
+                    for (MapRenderer r : mapView.getRenderers()) {
+                        mapView.removeRenderer(r);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        int used = (quota != null) ? quota.getUsedSlots(player.getUniqueId()) : 0;
+        int max = (quota != null) ? quota.getMaxSlots(player) : 0;
+        player.sendMessage(Component.text(Messages.quotaDeleted(id, used, max)));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * Maneja el subcomando /imagen uso [jugador] (F11.19).
+     */
+    public static int handleUso(
+        CommandSender sender,
+        String targetPlayerName,
+        FraMCitPlugin plugin,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
+        if (!sender.hasPermission("framcit.admin")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (imageStore == null) {
+            sender.sendMessage(Component.text("No hay datos de almacenamiento disponibles."));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        List<ImageIndexEntry> entries;
+        UUID targetUuid = null;
+        if (targetPlayerName != null && !targetPlayerName.isBlank()) {
+            targetUuid = resolveTargetUuid(targetPlayerName, imageStore);
+            final UUID fUuid = targetUuid;
+            entries = imageStore.getIndexManager().getAllEntries().stream()
+                .filter(e -> (fUuid != null && e.hasOwner(fUuid)) || (e.getAuthorName() != null && e.getAuthorName().equalsIgnoreCase(targetPlayerName)))
+                .toList();
+        } else {
+            entries = new ArrayList<>(imageStore.getIndexManager().getAllEntries());
+        }
+
+        int totalImages = entries.size();
+        int totalFrames = entries.stream().mapToInt(ImageIndexEntry::getFrameCount).sum();
+
+        // Medir espacio real ocupado en disco por los .fmc
+        long diskBytes = 0;
+        for (ImageIndexEntry e : entries) {
+            Path fmc = imageStore.getImagesFolder().resolve(e.getMapId() + ".fmc");
+            try {
+                if (Files.exists(fmc)) {
+                    diskBytes += Files.size(fmc);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Medir memoria ocupada ahora mismo por el cache LRU
+        long memBytes = 0;
+        int loadedCount = 0;
+        if (targetPlayerName != null && !targetPlayerName.isBlank()) {
+            for (ImageIndexEntry e : entries) {
+                if (imageStore.getLruCache().containsKey(e.getMapId())) {
+                    loadedCount++;
+                    memBytes += imageStore.getLruCache().getEntryBytes(e.getMapId());
+                }
+            }
+        } else {
+            loadedCount = imageStore.getLruCache().size();
+            memBytes = imageStore.getLruCache().getCurrentBytes();
+        }
+        int diskOnlyCount = totalImages - loadedCount;
+
+        // Contar cuántas imágenes están animándose en este momento
+        long animatingCount = 0;
+        if (plugin != null && plugin.getAnimationManager() != null) {
+            final List<Integer> entryMapIds = entries.stream().map(ImageIndexEntry::getMapId).toList();
+            animatingCount = plugin.getAnimationManager().getAllStates().stream()
+                .filter(PlayerMapState::isGazing)
+                .map(PlayerMapState::getMapId)
+                .filter(entryMapIds::contains)
+                .distinct()
+                .count();
+        }
+
+        String targetHeader = (targetPlayerName != null && !targetPlayerName.isBlank())
+            ? (" (" + targetPlayerName + ")")
+            : " (Global)";
+
+        sender.sendMessage(Component.text("--- Consumo de recursos de FraMCit" + targetHeader + " ---"));
+        sender.sendMessage(Component.text(String.format("Imágenes: %d | Frames totales: %d", totalImages, totalFrames)));
+        sender.sendMessage(Component.text(String.format("Disco: %.2f MB (%d bytes en archivos .fmc)", (double) diskBytes / (1024 * 1024), diskBytes)));
+        sender.sendMessage(Component.text(String.format("Memoria activa en LRU: %.2f MB (%d bytes) en %d imágenes cargadas (%d solo en disco)", (double) memBytes / (1024 * 1024), memBytes, loadedCount, diskOnlyCount)));
+        sender.sendMessage(Component.text(String.format("Animaciones activas: %d imágenes (consumo de tick)", animatingCount)));
+
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * Maneja el subcomando /imagen purgar-jugador <jugador> [confirmar] (F11.20).
+     */
+    public static int handlePurgarJugador(
+        CommandSender sender,
+        String targetPlayerName,
+        boolean confirmed,
+        FraMCitPlugin plugin,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
+        if (!sender.hasPermission("framcit.admin")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (imageStore == null) {
+            sender.sendMessage(Component.text(Messages.ADMIN_PURGE_NOT_FOUND));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        UUID targetUuid = resolveTargetUuid(targetPlayerName, imageStore);
+
+        final UUID fUuid = targetUuid;
+        List<ImageIndexEntry> owned = (fUuid != null)
+            ? imageStore.getIndexManager().getAllEntries().stream().filter(e -> e.hasOwner(fUuid)).toList()
+            : List.of();
+
+        if (owned.isEmpty()) {
+            sender.sendMessage(Component.text(String.format("El jugador %s no posee ninguna imagen.", targetPlayerName)));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        QuotaService quota = resolveQuotaService(plugin, imageStore, fallbackQuotaService);
+
+        if (!confirmed) {
+            int willDeleteFiles = 0;
+            long willFreeBytes = 0;
+            int sharedRetained = 0;
+            for (ImageIndexEntry e : owned) {
+                boolean hasOthers = (quota != null) && quota.hasOtherOwners(e.getMapId(), fUuid);
+                if (hasOthers) {
+                    sharedRetained++;
+                } else {
+                    willDeleteFiles++;
+                    Path fmc = imageStore.getImagesFolder().resolve(e.getMapId() + ".fmc");
+                    try {
+                        if (Files.exists(fmc)) willFreeBytes += Files.size(fmc);
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            sender.sendMessage(Component.text(String.format(
+                "El jugador %s posee %d imágenes. Se borrarían %d archivos de disco liberando %.2f MB (%d se conservarán por posesión compartida). Usa /imagen purgar-jugador %s confirmar para proceder.",
+                targetPlayerName,
+                owned.size(),
+                willDeleteFiles,
+                (double) willFreeBytes / (1024 * 1024),
+                sharedRetained,
+                targetPlayerName
+            )));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Ejecutar purga de imágenes del jugador
+        int purgedCount = owned.size();
+        for (ImageIndexEntry e : owned) {
+            int mapId = e.getMapId();
+            boolean hasOthers = (quota != null) && quota.hasOtherOwners(mapId, fUuid);
+
+            if (quota != null) {
+                quota.removeOwnership(mapId, fUuid);
+            } else {
+                e.removeOwner(fUuid);
+            }
+
+            if (!hasOthers) {
+                imageStore.getLruCache().remove(mapId);
+                Path fmcPath = imageStore.getImagesFolder().resolve(mapId + ".fmc");
+                try {
+                    Files.deleteIfExists(fmcPath);
+                } catch (Exception ignored) {}
+
+                imageStore.getIndexManager().removeEntry(mapId);
+
+                if (plugin != null && plugin.getAnimationManager() != null) {
+                    plugin.getAnimationManager().removeMap(mapId);
+                }
+
+                try {
+                    MapView mapView = Bukkit.getMap(mapId);
+                    if (mapView != null) {
+                        for (MapRenderer r : mapView.getRenderers()) {
+                            mapView.removeRenderer(r);
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+        }
+
+        imageStore.saveIndex();
+
+        // F11.20: Registro en el log: quién lo ejecutó, sobre quién y cuántas imágenes borró
+        if (plugin != null) {
+            plugin.getLogger().info(String.format(
+                "Purgadas %d imágenes del jugador %s (%s) por el administrador %s.",
+                purgedCount,
+                targetPlayerName,
+                fUuid != null ? fUuid.toString() : "desconocido",
+                sender.getName()
+            ));
+        }
+
+        sender.sendMessage(Component.text(String.format("Se purgaron %d imágenes del jugador %s.", purgedCount, targetPlayerName)));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static Player findOnlinePlayer(String name) {
+        if (Bukkit.getServer() == null || name == null) return null;
+        try {
+            return Bukkit.getPlayerExact(name);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static UUID findOfflinePlayerUuid(String name) {
+        if (Bukkit.getServer() == null || name == null) return null;
+        try {
+            OfflinePlayer op = Bukkit.getOfflinePlayer(name);
+            return (op != null) ? op.getUniqueId() : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static UUID resolveTargetUuid(String targetPlayerName, ImageStore imageStore) {
+        if (targetPlayerName == null || targetPlayerName.isBlank()) return null;
+        Player online = findOnlinePlayer(targetPlayerName);
+        if (online != null) return online.getUniqueId();
+        if (imageStore != null && imageStore.getIndexManager() != null) {
+            for (ImageIndexEntry e : imageStore.getIndexManager().getAllEntries()) {
+                if (targetPlayerName.equalsIgnoreCase(e.getAuthorName())) {
+                    try {
+                        return UUID.fromString(e.getAuthorUuid());
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+        return findOfflinePlayerUuid(targetPlayerName);
+    }
+
+    private static QuotaService resolveQuotaService(
+        FraMCitPlugin plugin,
+        ImageStore imageStore,
+        QuotaService fallbackQuotaService
+    ) {
+        if (plugin != null && plugin.getQuotaService() != null) {
+            return plugin.getQuotaService();
+        }
+        if (fallbackQuotaService != null) {
+            return fallbackQuotaService;
+        }
+        if (imageStore != null) {
+            return new QuotaService(imageStore, () -> plugin != null ? plugin.getPluginConfig() : FraMCitConfig.defaults());
+        }
+        return null;
+    }
+
+    /**
+     * Entrega un mapa ya existente desde la cache sin crear un nuevo MapView ni encolar descargas (F5.5, F11.11, F11.12).
      */
     private static void deliverCachedMap(
         FraMCitPlugin plugin,
         EconomyService eco,
+        Player player,
+        String rawUrl,
+        ImageIndexEntry cached,
+        MapView mapView,
+        ImageStore imageStore
+    ) {
+        deliverCachedMap(plugin, eco, null, player, rawUrl, cached, mapView, imageStore);
+    }
+
+    private static void deliverCachedMap(
+        FraMCitPlugin plugin,
+        EconomyService eco,
+        QuotaService quota,
         Player player,
         String rawUrl,
         ImageIndexEntry cached,
@@ -573,6 +1194,16 @@ public final class ImageCommand {
             player.sendMessage(Component.text(Messages.INVENTORY_FULL));
         }
 
+        // Registrar posesión compartida o reiterada en el índice (F11.5, F11.11, F11.12)
+        if (quota != null) {
+            quota.addOwnership(cached.getMapId(), player.getUniqueId());
+        } else {
+            cached.addOwner(player.getUniqueId());
+            if (imageStore != null) {
+                imageStore.saveIndex();
+            }
+        }
+
         // F10.13, F10.15: Mensaje de cobro si no fue gratis
         if (!successCharge.isFree()) {
             player.sendMessage(Component.text(Messages.chargeSuccess(successCharge.formattedAmount())));
@@ -618,12 +1249,26 @@ public final class ImageCommand {
         handleResult(plugin, eco, player, rawUrl, normalizedUrl, result, imageStore);
     }
 
+    public static void handleResult(
+        FraMCitPlugin plugin,
+        EconomyService eco,
+        Player player,
+        String rawUrl,
+        String normalizedUrl,
+        ImageProcessResult result,
+        ImageStore imageStore
+    ) {
+        QuotaService quota = (plugin != null && plugin.getQuotaService() != null) ? plugin.getQuotaService() : null;
+        handleResult(plugin, eco, quota, player, rawUrl, normalizedUrl, result, imageStore);
+    }
+
     /**
-     * Procesa el resultado de la imagen en el hilo principal de Bukkit (F10.8, F10.9, F10.10, F10.14).
+     * Procesa el resultado de la imagen en el hilo principal de Bukkit (F10.8, F10.9, F10.10, F10.14, F11.13, F11.14).
      */
     public static void handleResult(
         FraMCitPlugin plugin,
         EconomyService eco,
+        QuotaService quota,
         Player player,
         String rawUrl,
         String normalizedUrl,
@@ -635,8 +1280,11 @@ public final class ImageCommand {
                 plugin.getLogger().warning("Fallo al procesar imagen para " + player.getName() + " (" + rawUrl + "): " + failure.cause().getMessage());
             }
             if (player.isOnline()) {
-                // F4.13 / SEC 9: Ningún mensaje al jugador filtra rutas, IPs ni trazas
-                player.sendMessage(Component.text(failure.userMessage()));
+                if (failure.cause() instanceof TooManyFramesException tmfe) {
+                    player.sendMessage(Component.text(Messages.quotaTooManyFrames(tmfe.getFrameCount(), tmfe.getLimit())));
+                } else {
+                    player.sendMessage(Component.text(failure.userMessage()));
+                }
             }
             return;
         }
@@ -651,7 +1299,17 @@ public final class ImageCommand {
             return;
         }
 
-        // F10.8: Cobrar AL ENTREGAR el mapa, nunca antes
+        // Paso 8: Slot disponible otra vez, justo antes de entregar (Spec 003 Sección 4, F11.13).
+        // Si el jugador llenó su cupo mientras se descargaba, no se entrega el mapa, NO SE COBRA, y se le explica por qué.
+        if (quota != null && !quota.canAcquireImage(player, normalizedUrl)) {
+            player.sendMessage(Component.text(Messages.QUOTA_FULL_DELIVERY));
+            if (plugin != null) {
+                plugin.getLogger().info(String.format("Entrega cancelada para %s (%s): cupo lleno al entregar.", player.getName(), rawUrl));
+            }
+            return;
+        }
+
+        // Paso 9: Cobrar AL ENTREGAR el mapa, nunca antes (Spec 002, F10.8)
         ChargeResult chargeResult = (eco != null) ? eco.charge(player) : new ChargeResult.Success(true, "gratis");
         if (chargeResult instanceof ChargeResult.InsufficientFunds) {
             // F10.9: Saldo perdido entre la comprobación y el cobro: no se entrega el mapa y se descarta lo creado
@@ -673,7 +1331,7 @@ public final class ImageCommand {
         ChargeResult.Success successCharge = (ChargeResult.Success) chargeResult;
 
         try {
-            // F4.3: Crear MapView en el hilo principal
+            // Paso 10: Entrega del item (F4.3 - F4.6)
             MapView mapView = Bukkit.createMap(player.getWorld());
             for (MapRenderer r : mapView.getRenderers()) {
                 mapView.removeRenderer(r);
@@ -684,10 +1342,8 @@ public final class ImageCommand {
             mapView.setTrackingPosition(false);
             mapView.setUnlimitedTracking(false);
 
-            // F4.4 y F4.5: Construir el item (mapa relleno, nombre, lore y marca PDC)
             ItemStack item = MapItemBuilder.buildMapItem(mapView, success.finalUri(), rawUrl, player);
 
-            // F4.6: Entrega al inventario; si está lleno, soltar al suelo y avisar por chat
             HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(item);
             if (!leftover.isEmpty()) {
                 for (ItemStack dropped : leftover.values()) {
@@ -696,19 +1352,16 @@ public final class ImageCommand {
                 player.sendMessage(Component.text(Messages.INVENTORY_FULL));
             }
 
-            // F10.13, F10.15: Mensaje de cobro si no fue gratis
             if (!successCharge.isFree()) {
                 player.sendMessage(Component.text(Messages.chargeSuccess(successCharge.formattedAmount())));
             }
 
-            // F4.10: Mensaje final según formato y número de frames
             if (success.image().isAnimated()) {
                 player.sendMessage(Component.text(Messages.animatedSuccess(success.image().getFrameCount())));
             } else {
                 player.sendMessage(Component.text(Messages.STATIC_SUCCESS));
             }
 
-            // F4.11 [SEC] & F10.14: Log obligatorio incorporando cobro ("gratis" o importe)
             if (plugin != null) {
                 plugin.getLogger().info(String.format(
                     "Mapa creado: jugador=%s, uuid=%s, url=%s, tamano=%d bytes, formato=%s, id=%d, cobro=%s",
@@ -722,12 +1375,15 @@ public final class ImageCommand {
                 ));
             }
 
-            // F5.2, F5.11, F5.14: Guardar imagen en .fmc y actualizar index.json fuera del hilo principal
+            // Guardar imagen en .fmc y actualizar index.json con el jugador como propietario (F11.5, F11.7)
             if (imageStore != null) {
                 String norm = (normalizedUrl != null) ? normalizedUrl : UrlNormalizer.normalize(rawUrl);
                 List<Integer> delays = success.image().getFrames().stream()
                     .map(ConvertedFrame::getDelayMs)
                     .toList();
+
+                List<String> owners = new ArrayList<>();
+                owners.add(player.getUniqueId().toString());
 
                 ImageIndexEntry entry = new ImageIndexEntry(
                     mapId,
@@ -740,7 +1396,8 @@ public final class ImageCommand {
                     success.image().getFrameCount(),
                     delays,
                     FmcFormat.PALETTE_VERSION,
-                    false
+                    false,
+                    owners
                 );
 
                 imageStore.saveImageAsync(mapId, success.image(), entry);

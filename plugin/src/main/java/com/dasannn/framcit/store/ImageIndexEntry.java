@@ -21,9 +21,11 @@ public class ImageIndexEntry {
     private List<Integer> delays;
     private int paletteVersion;
     private boolean orphan;
+    private List<String> owners;
 
     public ImageIndexEntry() {
         this.delays = new ArrayList<>();
+        this.owners = null;
     }
 
     public ImageIndexEntry(
@@ -39,6 +41,36 @@ public class ImageIndexEntry {
         int paletteVersion,
         boolean orphan
     ) {
+        this(
+            mapId,
+            originalUrl,
+            normalizedUrl,
+            authorName,
+            authorUuid,
+            createdAt,
+            format,
+            frameCount,
+            delays,
+            paletteVersion,
+            orphan,
+            (authorUuid != null && !authorUuid.isBlank()) ? List.of(authorUuid) : List.of()
+        );
+    }
+
+    public ImageIndexEntry(
+        int mapId,
+        String originalUrl,
+        String normalizedUrl,
+        String authorName,
+        String authorUuid,
+        String createdAt,
+        String format,
+        int frameCount,
+        List<Integer> delays,
+        int paletteVersion,
+        boolean orphan,
+        List<String> owners
+    ) {
         this.mapId = mapId;
         this.originalUrl = Objects.requireNonNull(originalUrl, "originalUrl cannot be null");
         this.normalizedUrl = Objects.requireNonNull(normalizedUrl, "normalizedUrl cannot be null");
@@ -50,6 +82,7 @@ public class ImageIndexEntry {
         this.delays = delays != null ? new ArrayList<>(delays) : new ArrayList<>();
         this.paletteVersion = paletteVersion;
         this.orphan = orphan;
+        this.owners = (owners != null) ? new ArrayList<>(owners) : new ArrayList<>();
     }
 
     public int getMapId() {
@@ -140,6 +173,62 @@ public class ImageIndexEntry {
         this.orphan = orphan;
     }
 
+    public List<String> getOwners() {
+        if (owners == null) {
+            owners = new ArrayList<>();
+        }
+        return owners;
+    }
+
+    public List<String> getRawOwners() {
+        return owners;
+    }
+
+    public void setOwners(List<String> owners) {
+        this.owners = (owners != null) ? new ArrayList<>(owners) : new ArrayList<>();
+    }
+
+    public boolean hasOwner(String uuid) {
+        if (uuid == null || uuid.isBlank()) return false;
+        return getOwners().contains(uuid);
+    }
+
+    public boolean hasOwner(java.util.UUID uuid) {
+        if (uuid == null) return false;
+        return hasOwner(uuid.toString());
+    }
+
+    public boolean addOwner(String uuid) {
+        if (uuid == null || uuid.isBlank()) return false;
+        if (!getOwners().contains(uuid)) {
+            return getOwners().add(uuid);
+        }
+        return false;
+    }
+
+    public boolean addOwner(java.util.UUID uuid) {
+        if (uuid == null) return false;
+        return addOwner(uuid.toString());
+    }
+
+    public boolean removeOwner(String uuid) {
+        if (uuid == null || uuid.isBlank()) return false;
+        return getOwners().remove(uuid);
+    }
+
+    public boolean removeOwner(java.util.UUID uuid) {
+        if (uuid == null) return false;
+        return removeOwner(uuid.toString());
+    }
+
+    public int getOwnerCount() {
+        return getOwners().size();
+    }
+
+    public boolean isOwnedByAnyone() {
+        return !getOwners().isEmpty();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -167,6 +256,7 @@ public class ImageIndexEntry {
             ", delays=" + delays +
             ", paletteVersion=" + paletteVersion +
             ", orphan=" + orphan +
+            ", owners=" + owners +
             '}';
     }
 }

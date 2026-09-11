@@ -65,6 +65,18 @@ public final class Messages {
     public static final String DEFAULT_ECONOMY_FUNDS_LOST = "Ya no tienes suficiente dinero: la imagen no se entrego.";
     public static final String DEFAULT_ECONOMY_PAYMENT_FAILED = "No se pudo procesar el pago. Avisa al staff.";
 
+    // Mensajes de cupos por defecto (Spec 003 Sección 9, F11.21)
+    public static final String DEFAULT_QUOTA_FULL_REQUEST = "Ya tienes {usados} de {limite} imagenes. Borra una con /imagen borrar <id> o mira las tuyas con /imagen mias.";
+    public static final String DEFAULT_QUOTA_TOO_MANY_FRAMES = "Esa imagen tiene {frames} frames y tu limite es {limite}. No se te cobro nada.";
+    public static final String DEFAULT_QUOTA_FULL_DELIVERY = "Llenaste tu cupo mientras se descargaba. No se creo la imagen y no se te cobro nada.";
+    public static final String DEFAULT_QUOTA_DEFAULT_ZERO = "No tienes ningun espacio de imagenes asignado. Pideselo a un administrador.";
+    public static final String DEFAULT_QUOTA_MY_LIST_EMPTY = "No tienes ninguna imagen.";
+    public static final String DEFAULT_QUOTA_DELETE_CONFIRM = "Vas a borrar la imagen {id}. Los mapas que la usen se quedaran en blanco. Repite el comando con \"confirmar\" al final.";
+    public static final String DEFAULT_QUOTA_DELETE_CONFIRM_SHARED = "Vas a soltar la imagen {id}. Otros jugadores la tienen, asi que sus mapas seguiran funcionando. Repite el comando con \"confirmar\" al final.";
+    public static final String DEFAULT_QUOTA_DELETED = "Imagen borrada. Te queda {usados} de {limite} en uso.";
+    public static final String DEFAULT_QUOTA_ID_NOT_FOUND = "No existe ninguna imagen con ese id.";
+    public static final String DEFAULT_QUOTA_ID_NOT_OWNED = "Esa imagen no es tuya.";
+
     // Campos activos (mutables mediante recarga de messages.yml)
     public static String USAGE = DEFAULT_USAGE;
     public static String DOWNLOADING = DEFAULT_DOWNLOADING;
@@ -109,6 +121,17 @@ public final class Messages {
     public static String ECONOMY_CHARGE_SUCCESS = DEFAULT_ECONOMY_CHARGE_SUCCESS;
     public static String ECONOMY_FUNDS_LOST = DEFAULT_ECONOMY_FUNDS_LOST;
     public static String ECONOMY_PAYMENT_FAILED = DEFAULT_ECONOMY_PAYMENT_FAILED;
+
+    public static String QUOTA_FULL_REQUEST = DEFAULT_QUOTA_FULL_REQUEST;
+    public static String QUOTA_TOO_MANY_FRAMES = DEFAULT_QUOTA_TOO_MANY_FRAMES;
+    public static String QUOTA_FULL_DELIVERY = DEFAULT_QUOTA_FULL_DELIVERY;
+    public static String QUOTA_DEFAULT_ZERO = DEFAULT_QUOTA_DEFAULT_ZERO;
+    public static String QUOTA_MY_LIST_EMPTY = DEFAULT_QUOTA_MY_LIST_EMPTY;
+    public static String QUOTA_DELETE_CONFIRM = DEFAULT_QUOTA_DELETE_CONFIRM;
+    public static String QUOTA_DELETE_CONFIRM_SHARED = DEFAULT_QUOTA_DELETE_CONFIRM_SHARED;
+    public static String QUOTA_DELETED = DEFAULT_QUOTA_DELETED;
+    public static String QUOTA_ID_NOT_FOUND = DEFAULT_QUOTA_ID_NOT_FOUND;
+    public static String QUOTA_ID_NOT_OWNED = DEFAULT_QUOTA_ID_NOT_OWNED;
 
     /**
      * Restablece todos los mensajes a sus valores originales por defecto.
@@ -157,6 +180,17 @@ public final class Messages {
         ECONOMY_CHARGE_SUCCESS = DEFAULT_ECONOMY_CHARGE_SUCCESS;
         ECONOMY_FUNDS_LOST = DEFAULT_ECONOMY_FUNDS_LOST;
         ECONOMY_PAYMENT_FAILED = DEFAULT_ECONOMY_PAYMENT_FAILED;
+
+        QUOTA_FULL_REQUEST = DEFAULT_QUOTA_FULL_REQUEST;
+        QUOTA_TOO_MANY_FRAMES = DEFAULT_QUOTA_TOO_MANY_FRAMES;
+        QUOTA_FULL_DELIVERY = DEFAULT_QUOTA_FULL_DELIVERY;
+        QUOTA_DEFAULT_ZERO = DEFAULT_QUOTA_DEFAULT_ZERO;
+        QUOTA_MY_LIST_EMPTY = DEFAULT_QUOTA_MY_LIST_EMPTY;
+        QUOTA_DELETE_CONFIRM = DEFAULT_QUOTA_DELETE_CONFIRM;
+        QUOTA_DELETE_CONFIRM_SHARED = DEFAULT_QUOTA_DELETE_CONFIRM_SHARED;
+        QUOTA_DELETED = DEFAULT_QUOTA_DELETED;
+        QUOTA_ID_NOT_FOUND = DEFAULT_QUOTA_ID_NOT_FOUND;
+        QUOTA_ID_NOT_OWNED = DEFAULT_QUOTA_ID_NOT_OWNED;
     }
 
     /**
@@ -239,6 +273,17 @@ public final class Messages {
         ECONOMY_CHARGE_SUCCESS = getMessage(config, chargeKey, DEFAULT_ECONOMY_CHARGE_SUCCESS, logger);
         ECONOMY_FUNDS_LOST = getMessage(config, "economia.saldo-perdido", DEFAULT_ECONOMY_FUNDS_LOST, logger);
         ECONOMY_PAYMENT_FAILED = getMessage(config, "economia.fallo-pago", DEFAULT_ECONOMY_PAYMENT_FAILED, logger);
+
+        QUOTA_FULL_REQUEST = getMessage(config, "cupos.cupo-lleno-al-pedir", DEFAULT_QUOTA_FULL_REQUEST, logger);
+        QUOTA_TOO_MANY_FRAMES = getMessage(config, "cupos.cupo-demasiados-frames", DEFAULT_QUOTA_TOO_MANY_FRAMES, logger);
+        QUOTA_FULL_DELIVERY = getMessage(config, "cupos.cupo-lleno-al-entregar", DEFAULT_QUOTA_FULL_DELIVERY, logger);
+        QUOTA_DEFAULT_ZERO = getMessage(config, "cupos.cupo-cero", DEFAULT_QUOTA_DEFAULT_ZERO, logger);
+        QUOTA_MY_LIST_EMPTY = getMessage(config, "cupos.mias-vacia", DEFAULT_QUOTA_MY_LIST_EMPTY, logger);
+        QUOTA_DELETE_CONFIRM = getMessage(config, "cupos.borrar-confirmacion", DEFAULT_QUOTA_DELETE_CONFIRM, logger);
+        QUOTA_DELETE_CONFIRM_SHARED = getMessage(config, "cupos.borrar-confirmacion-compartida", DEFAULT_QUOTA_DELETE_CONFIRM_SHARED, logger);
+        QUOTA_DELETED = getMessage(config, "cupos.borrada", DEFAULT_QUOTA_DELETED, logger);
+        QUOTA_ID_NOT_FOUND = getMessage(config, "cupos.no-existe", DEFAULT_QUOTA_ID_NOT_FOUND, logger);
+        QUOTA_ID_NOT_OWNED = getMessage(config, "cupos.no-es-tuya", DEFAULT_QUOTA_ID_NOT_OWNED, logger);
     }
 
     private static String getMessage(ConfigurationSection config, String path, String defaultValue, Logger logger) {
@@ -300,5 +345,43 @@ public final class Messages {
 
     public static String chargeSuccess(String price) {
         return ECONOMY_CHARGE_SUCCESS.replace("{precio}", price);
+    }
+
+    public static String quotaFullRequest(int used, int max) {
+        return QUOTA_FULL_REQUEST
+            .replace("{usados}", String.valueOf(used))
+            .replace("{limite}", String.valueOf(max))
+            .replace("{maximo}", String.valueOf(max));
+    }
+
+    public static String quotaTooManyFrames(int frames, int max) {
+        return QUOTA_TOO_MANY_FRAMES
+            .replace("{frames}", String.valueOf(frames))
+            .replace("{limite}", String.valueOf(max))
+            .replace("{maximo}", String.valueOf(max));
+    }
+
+    public static String quotaDeleteConfirm(int id) {
+        return QUOTA_DELETE_CONFIRM.replace("{id}", String.valueOf(id));
+    }
+
+    public static String quotaDeleteConfirmShared(int id) {
+        return QUOTA_DELETE_CONFIRM_SHARED.replace("{id}", String.valueOf(id));
+    }
+
+    public static String quotaDeleted(int id, int used, int max) {
+        return QUOTA_DELETED
+            .replace("{id}", String.valueOf(id))
+            .replace("{usados}", String.valueOf(used))
+            .replace("{limite}", String.valueOf(max))
+            .replace("{maximo}", String.valueOf(max));
+    }
+
+    public static String quotaIdNotFound(int id) {
+        return QUOTA_ID_NOT_FOUND.replace("{id}", String.valueOf(id));
+    }
+
+    public static String quotaIdNotOwned(int id) {
+        return QUOTA_ID_NOT_OWNED.replace("{id}", String.valueOf(id));
     }
 }

@@ -36,13 +36,30 @@ public class ImageService {
     }
 
     /**
-     * Encola la descarga y procesamiento de una imagen a partir de su URL.
-     * Todo el trabajo pesado (red, decodificacion y conversion) corre en el pool de DownloadQueue.
+     * Encola la descarga y procesamiento de una imagen a partir de su URL con límite global por defecto.
      *
      * @param rawUrl URL sin procesar introducida por el usuario
      * @return CompletableFuture que se completa con el ImageProcessResult
      */
     public CompletableFuture<ImageProcessResult> process(String rawUrl) {
+        return process(rawUrl, ImageDecoder.getMaxFrames());
+    }
+
+    /**
+     * Encola la descarga y procesamiento de una imagen aplicando el límite efectivo de frames por petición (F11.8, F11.9).
+     *
+     * @param rawUrl URL sin procesar introducida por el usuario
+     * @param maxFrames límite de frames resuelto en el hilo principal
+     * @return CompletableFuture que se completa con el ImageProcessResult
+     */
+    public CompletableFuture<ImageProcessResult> process(String rawUrl, int maxFrames) {
+        if (isProcessStringOverridden()) {
+            return process(rawUrl);
+        }
+        return submitProcess(rawUrl, maxFrames);
+    }
+
+    private CompletableFuture<ImageProcessResult> submitProcess(String rawUrl, int maxFrames) {
         return queue.submit(downloader, rawUrl)
             .thenApply(downloadResult -> {
                 if (downloadResult instanceof DownloadResult.Failure failure) {
@@ -51,7 +68,7 @@ public class ImageService {
 
                 DownloadResult.Success success = (DownloadResult.Success) downloadResult;
                 try {
-                    DecodedImage decoded = ImageDecoder.decode(success.bytes());
+                    DecodedImage decoded = ImageDecoder.decode(success.bytes(), maxFrames);
                     ConvertedImage converted = MapConverter.convert(decoded);
                     return ImageProcessResult.success(converted, success.finalUri(), success.bytes().length);
                 } catch (ImageValidationException e) {
@@ -60,6 +77,15 @@ public class ImageService {
                     return ImageProcessResult.failure(Messages.ERROR_CORRUPTED_FILE, t);
                 }
             });
+    }
+
+    private boolean isProcessStringOverridden() {
+        try {
+            return getClass().getMethod("process", String.class).getDeclaringClass() != ImageService.class
+                && getClass().getMethod("process", String.class, int.class).getDeclaringClass() == ImageService.class;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 
     public Downloader getDownloader() {

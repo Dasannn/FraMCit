@@ -318,44 +318,44 @@ Implementa `docs/spec-003-slots.md`. Independiente de F12: no comparten codigo.
 - [x] **F11.4** [SEC] El cupo de frames de un jugador **nunca** supera el limite global de
       `config.yml`. El efectivo es el menor de los dos. Conceder `framcit.frames.500` no
       sube el techo del servidor: es el piso de seguridad de la constitution 6.6.
-- [ ] **F11.5** Posesion dentro de `index.json`: lista de UUIDs por entrada. No se crea
+- [x] **F11.5** Posesion dentro de `index.json`: lista de UUIDs por entrada. No se crea
       ningun archivo nuevo.
-- [ ] **F11.6** Migracion al cargar: una entrada sin lista de poseedores estrena una con su
+- [x] **F11.6** Migracion al cargar: una entrada sin lista de poseedores estrena una con su
       autor dentro. Autor desconocido: sin poseedores, y **no se borra**.
-- [ ] **F11.7** `QuotaService`: si a un jugador le cabe otra imagen, y cuantos frames puede
+- [x] **F11.7** `QuotaService`: si a un jugador le cabe otra imagen, y cuantos frames puede
       tener la que pide.
-- [ ] **F11.8** Los cupos se resuelven en el **hilo principal** antes de despachar al pool.
+- [x] **F11.8** Los cupos se resuelven en el **hilo principal** antes de despachar al pool.
       Lo que viaja es un numero, no el jugador.
-- [ ] **F11.9** [BUG] `ImageDecoder` deja de llevar el limite de frames en un campo
+- [x] **F11.9** [BUG] `ImageDecoder` deja de llevar el limite de frames en un campo
       estatico y lo recibe por parametro. Con 4 descargas simultaneas, dos jugadores con
       cupos distintos se pisan el limite: el de cupo 10 colaria 50. Test que lo demuestre.
-- [ ] **F11.10** Orden de comprobaciones del spec 003 seccion 4, integrado con el cobro del
+- [x] **F11.10** Orden de comprobaciones del spec 003 seccion 4, integrado con el cobro del
       spec 002. Sin slot no se mira el saldo ni se descarga nada.
-- [ ] **F11.11** Acierto de cache: ocupa slot igual, y el cupo de frames se comprueba
+- [x] **F11.11** Acierto de cache: ocupa slot igual, y el cupo de frames se comprueba
       **antes de descargar y antes de mirar el saldo**, porque el recuento ya esta en el
       indice.
-- [ ] **F11.12** URL que el jugador **ya posee**: entrega otra copia del item y el cupo no
+- [x] **F11.12** URL que el jugador **ya posee**: entrega otra copia del item y el cupo no
       se mueve. Se sigue cobrando (spec 002).
-- [ ] **F11.13** Re-comprobar el slot justo antes de entregar. Si se lleno durante la
+- [x] **F11.13** Re-comprobar el slot justo antes de entregar. Si se lleno durante la
       descarga: no se entrega, **no se cobra**, y se explica por que.
-- [ ] **F11.14** Rechazo por cupo de frames: no se cobra y no queda nada en disco.
-- [ ] **F11.15** `/imagen mias`: lo que posee quien lo ejecuta, con su cupo usado.
-- [ ] **F11.16** `/imagen borrar <id>` con `confirmar` obligatorio, y los dos textos de
+- [x] **F11.14** Rechazo por cupo de frames: no se cobra y no queda nada en disco.
+- [x] **F11.15** `/imagen mias`: lo que posee quien lo ejecuta, con su cupo usado.
+- [x] **F11.16** `/imagen borrar <id>` con `confirmar` obligatorio, y los dos textos de
       aviso (ultimo poseedor o posesion compartida).
-- [ ] **F11.17** El archivo de disco se borra **solo** cuando no queda ningun poseedor. Con
+- [x] **F11.17** El archivo de disco se borra **solo** cuando no queda ningun poseedor. Con
       otros poseedores, no cambia nada para ellos.
-- [ ] **F11.18** `/imagen listar [jugador] [pagina]`.
-- [ ] **F11.19** `/imagen uso [jugador]`: imagenes, frames, disco medido, memoria **cargada
+- [x] **F11.18** `/imagen listar [jugador] [pagina]`.
+- [x] **F11.19** `/imagen uso [jugador]`: imagenes, frames, disco medido, memoria **cargada
       ahora mismo** en el cache LRU, y cuantas se estan animando. Ningun numero puede ser
       una proyeccion presentada como medida.
-- [ ] **F11.20** `/imagen purgar-jugador <jugador>` con `confirmar` obligatorio, respetando
+- [x] **F11.20** `/imagen purgar-jugador <jugador>` con `confirmar` obligatorio, respetando
       la posesion compartida, y con registro en el log de quien lo ejecuto y sobre quien.
-- [ ] **F11.21** Mensajes de la seccion 9 del spec 003 en `messages.yml`.
-- [ ] **F11.22** Bajar un cupo por debajo de lo que un jugador ya tiene **no borra nada**.
-- [ ] **F11.23** Tests: resolucion de nodos, tope global, posesion compartida, borrado del
+- [x] **F11.21** Mensajes de la seccion 9 del spec 003 en `messages.yml`.
+- [x] **F11.22** Bajar un cupo por debajo de lo que un jugador ya tiene **no borra nada**.
+- [x] **F11.23** Tests: resolucion de nodos, tope global, posesion compartida, borrado del
       ultimo poseedor, migracion, limite de frames por peticion con dos cupos a la vez, y
       el orden de comprobaciones sin cobrar de mas.
-- [ ] **F11.24** Prueba manual: los 24 criterios de aceptacion del spec 003.
+- [x] **F11.24** Prueba manual: los 24 criterios de aceptacion del spec 003.
 
 **Fase terminada cuando**: los 24 criterios del spec 003 se cumplen, y bajar un cupo nunca
 destruye contenido.
