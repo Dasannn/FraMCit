@@ -60,6 +60,31 @@ Alias: `/img`, `/image`.
 - Descripcion (lore): dominio de origen, quien lo creo y la fecha. Sirve para que el staff
   identifique de un vistazo el origen de una imagen colgada.
 - Marca interna que identifica el mapa como creado por este plugin.
+- La descripcion incluye que el mapa no se puede copiar ni ampliar (seccion 2.4).
+
+### 2.4 El mapa no se puede craftear
+
+> **Enmienda del 2026-09-10.** Regla nueva, pedida por el owner.
+
+Un mapa creado por FraMCit es un **item inerte para el crafteo**: no entra en ninguna
+receta de la mesa de crafteo ni en ninguna operacion de la mesa de cartografia.
+
+Eso cubre copiar, ampliar (zoom), bloquear y cualquier otra receta, presente o futura, que
+consuma un mapa. Se bloquea la categoria entera, no una lista de recetas: una lista habria
+que mantenerla cada vez que Minecraft anada una receta nueva, y el dia que se olvide queda
+un agujero silencioso.
+
+La razon de peso es la ampliacion. Ampliar un mapa genera un mapa **nuevo, con otro id**,
+que el plugin no conoce y para el que no tiene imagen: el jugador se queda con un mapa en
+blanco y la sensacion de que el plugin esta roto. Copiar no rompe nada tecnicamente, pero
+reparte el cuadro sin que el staff pueda seguirle la pista, asi que entra en el mismo saco.
+
+- Al intentarlo, el resultado del crafteo sale **vacio**. El item nunca se consume ni se
+  destruye.
+- La restriccion viaja en el propio item, no en el jugador: quitar el plugin devuelve esos
+  mapas a comportarse como mapas normales.
+- La descripcion del item (seccion 2.3) lo dice, para que nadie pierda el tiempo
+  intentandolo.
 
 ## 3. Reglas de imagen
 
@@ -156,6 +181,33 @@ Cada jugador ve su propia animacion, con su propio ritmo, independiente de los d
 Un mapa GIF sostenido en la mano tambien se anima, mientras el jugador lo tenga en la mano
 principal y lo este mirando (vista de mapa activa).
 
+### 4.4 Pausa por mirada prolongada
+
+> **Enmienda del 2026-09-10.** Regla nueva, pedida por el owner para que un jugador
+> ausente no mantenga una animacion viva indefinidamente.
+
+Si un jugador lleva **mas de 5 minutos mirando el mismo marco sin apartar la vista**, su
+animacion de ese mapa se detiene.
+
+- El tiempo es **configurable** (`animacion.pausa-por-mirada`). A cero, la regla se
+  desactiva y la animacion nunca se detiene por este motivo.
+- El contador es de **mirada seguida**: apartar la vista lo reinicia a cero. Un jugador que
+  mira un cuadro, se va y vuelve, nunca llega a activarlo.
+- Es **por jugador y por marco**. Que a un jugador se le pause un cuadro no afecta a los
+  demas jugadores ni a sus otros cuadros, igual que el resto de la animacion (seccion 4.1).
+- Al pausarse, el mapa se queda congelado en el frame en el que estaba. No se reinicia al
+  primer frame ni se pone en blanco.
+- **Se reanuda apartando la vista y volviendo a mirar.** Ese es el unico disparador.
+- Aplica igual al mapa sostenido en la mano (seccion 4.3): dejar de mirarlo reinicia el
+  contador.
+
+Quien esta jugando normalmente no llega nunca a los 5 minutos de mirada fija. A quien si
+llega, casi siempre es porque se dejo el personaje plantado delante, y ahi la animacion
+solo esta gastando red. El efecto buscado es ese ahorro, no limitar a nadie.
+
+La pausa **no libera memoria ni descarga la imagen**: el mapa sigue cargado y listo. Lo
+unico que se deja de hacer es enviar frames a ese jugador.
+
 ## 5. Limites
 
 Rechazo con mensaje explicativo si se supera cualquiera de estos:
@@ -171,6 +223,7 @@ Rechazo con mensaje explicativo si se supera cualquiera de estos:
 | Timeout de lectura total | 15 segundos |
 | Redirecciones seguidas | 3 |
 | Descargas simultaneas en todo el servidor | 4 |
+| Mirada seguida antes de pausar la animacion | 5 minutos (0 la desactiva) |
 
 Todos estos valores son editables en `config.yml`. El limite de descarga se aplica
 contando bytes mientras se descarga, no confiando en lo que declare el servidor remoto.

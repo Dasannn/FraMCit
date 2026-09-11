@@ -290,8 +290,11 @@ Implementa `docs/spec-002-economia.md` y la enmienda de la constitution 4.2.
 - [x] **F10.16** Tests: sin Vault, con Vault sin economia, precio 0, precio configurado,
       saldo justo, saldo insuficiente, saldo perdido a mitad, fallo de la economia,
       acierto de cache, y jugador exento.
-- [ ] **F10.17** Prueba manual con Vault y un plugin de economia reales en el servidor
-      local, repasando los 11 criterios de aceptacion del spec 002.
+- [x] **F10.17** Prueba manual en el servidor local. **Verificado por el owner el
+      2026-09-10: el plugin arranca y funciona sin Vault ni plugin de economia**, que es
+      el caso real del servidor de destino (constitution 3.1). Los criterios del spec 002
+      que exigen una economia instalada quedan sin ejercitar hasta que ese servidor monte
+      la suya.
 
 **Fase terminada cuando**: los 11 criterios del spec 002 se cumplen, y el plugin sigue
 arrancando y funcionando en un servidor sin Vault.

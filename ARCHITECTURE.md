@@ -105,6 +105,19 @@ sola implementacion.
 - `GazeTracker` - raytrace periodico, decide quien mira que.
 - `AnimationScheduler` - avanza frames y llama a `sendMap` solo donde hace falta.
 
+### `.quota` (spec 003)
+- `QuotaService` - resuelve los dos cupos de un jugador y responde dos preguntas: si le cabe
+  una imagen mas, y cuantos frames puede tener la que pide.
+- `PermissionTier` - traduce una familia de nodos escalonados (`framcit.slots.<n>`,
+  `framcit.frames.<n>`) al numero mas alto que el jugador tiene concedido. Una sola clase
+  para las dos familias: solo cambian el prefijo y el tope.
+- `Ownership` - quien posee que. Vive dentro de `index.json`, no en un archivo aparte
+  (seccion 6).
+
+### `.protect` (spec 001 seccion 2.4)
+- `CraftGuard` - listener que vacia el resultado de cualquier receta o operacion de
+  cartografia que tenga un mapa de FraMCit entre sus ingredientes.
+
 ## 4. Hilos
 
 Tres zonas, con una regla cada una:
@@ -121,6 +134,28 @@ convertida. Crear el mapa y dar el item ocurre siempre en el hilo principal.
 Estado compartido: el indice de `ImageStore` es un `ConcurrentHashMap`. Los frames
 convertidos son inmutables una vez creados, asi que se leen desde cualquier hilo sin
 bloqueo.
+
+### 4.1 Los permisos se resuelven en el hilo principal
+
+Regla que sale del spec 003 y que conviene no descubrir tarde: **los cupos se resuelven
+antes de salir del hilo principal**, y lo que viaja al pool es un numero, no el jugador.
+
+El motivo es doble:
+
+1. Consultar permisos desde un hilo cualquiera no esta garantizado por la API, y algunos
+   gestores de permisos hacen I/O al resolverlos.
+2. El limite de frames tiene que ser **por peticion**, no global. Hoy vive en un campo
+   estatico compartido (`ImageDecoder.maxFrames`), y con 4 descargas simultaneas dos
+   jugadores con cupos distintos se pisarian el limite: el que tiene cupo 10 colaria 50
+   porque otro con cupo 50 estaba descargando a la vez. Es una condicion de carrera real,
+   no un detalle de estilo.
+
+Por tanto `ImageDecoder` deja de llevar el limite en estado estatico y lo recibe como
+parametro de cada decodificacion. El limite efectivo se calcula en el hilo principal como
+`min(cupo del jugador, limite global de config.yml)` y viaja con la peticion.
+
+El limite global sigue existiendo como valor de configuracion y como tope: ningun parametro
+por peticion puede superarlo. Es piso de seguridad (constitution 6.6), no una preferencia.
 
 ## 5. Como se anima un GIF sin NMS
 
@@ -165,6 +200,45 @@ solo las columnas que cambian requeriria paquetes crudos y por tanto NMS, que la
 constitution prohibe. Queda anotado como unica via de optimizacion futura, sujeta a
 aprobacion.
 
+### 5.2 Pausa por mirada prolongada (spec 001 seccion 4.4)
+
+`GazeTracker` ya recorre periodicamente quien mira que. La pausa se apoya en ese mismo
+ciclo, sin anadir ninguno nuevo:
+
+- Por cada par (jugador, marco) que esta mirando, se guarda **el tick en que empezo a
+  mirar**. Mientras siga mirando, ese valor no se toca.
+- Cuando el ciclo detecta que ese par ya no esta mirando, se borra la entrada. Eso es lo
+  que hace que el contador sea de mirada seguida y no acumulada: no hay nada que acumular.
+- `AnimationScheduler` no envia frames a un par cuya mirada supere el umbral. No hace
+  ninguna cuenta propia: pregunta.
+
+El estado es un mapa por jugador que se vacia entero al desconectarse. Una entrada por
+marco mirado, y solo mientras lo mira: un jugador mira un punado de marcos a la vez, no
+cientos.
+
+Pausar **no descarga la imagen ni libera memoria**. Lo unico que deja de ocurrir es el
+envio de paquetes a ese jugador, que es justo lo que esta regla quiere ahorrar. El mapa
+sigue en el cache LRU y vuelve al instante.
+
+### 5.3 El mapa inerte (spec 001 seccion 2.4)
+
+El item ya lleva una marca interna en su `PersistentDataContainer` que lo identifica como
+creado por FraMCit. `CraftGuard` no necesita nada mas: si un ingrediente lleva esa marca,
+el resultado se vacia.
+
+Se bloquea **la categoria entera**, no una lista de recetas. Mantener una lista obligaria a
+revisarla cada vez que Minecraft anada una receta que consuma mapas, y el dia que se olvide
+queda un agujero silencioso. Vaciar el resultado ante cualquier receta que toque uno de
+nuestros mapas no tiene ese problema.
+
+El item nunca se consume ni se destruye: el resultado sale vacio y el jugador recupera sus
+ingredientes tal cual.
+
+La mesa de crafteo se cubre con `PrepareItemCraftEvent`. **El evento exacto de la mesa de
+cartografia hay que confirmarlo contra el javadoc de Paper 26.2 al implementarlo**, no se
+da por sabido aqui: es la parte que de verdad importa, porque la ampliacion es lo unico
+que produce un mapa roto. La fase no se da por terminada sin probar las dos mesas a mano.
+
 ## 6. Almacenamiento
 
 ```
@@ -185,6 +259,15 @@ Decisiones:
   vuelve a decodificar ni a convertir nada: es leer bytes y ya. Ademas garantiza que una
   imagen colgada se vea siempre igual, aunque el algoritmo de conversion cambie en el futuro.
 - `index.json` es texto legible e inspeccionable, como exige la constitution 5.4.
+- **La posesion vive dentro de `index.json`**, como una lista de UUIDs en cada entrada. No
+  se crea un archivo nuevo: ya hay escritura atomica y respaldo `.bak` resueltos ahi, y
+  duplicar ese mecanismo para una lista de UUIDs seria trabajo sin beneficio. La migracion
+  del spec 003 es entonces trivial: al cargar, una entrada sin lista de poseedores estrena
+  una con su autor dentro.
+- Contar los slots de un jugador recorre el indice. Es O(n) sobre unos cientos de entradas,
+  en respuesta a un comando que un jugador escribe a mano: no merece un indice inverso.
+  Si algun dia el indice crece a decenas de miles, la palanca es un mapa de uuid a ids
+  mantenido en memoria al cargar.
 - La clave de cache es la URL normalizada (host en minusculas, sin barra final). El indice
   guarda ambas: la URL original para el log y para `/imagen info`, la normalizada como clave.
 - El campo de version de formato existe para poder migrar sin romper cuadros ya colgados.
@@ -220,6 +303,11 @@ mundo. Cumple la constitution 5.5.
 fps, dimensiones, timeouts, redirecciones, descargas simultaneas, rango de vision del
 raytrace, periodo del `GazeTracker`, y tamano del cache en memoria.
 
+Anadido por los specs 002 y 003: el precio por imagen, los dos cupos por defecto
+(`slots.por-defecto`, `frames.por-defecto`) con sus topes de busqueda de nodos, y el tiempo
+de mirada seguida antes de pausar una animacion (`animacion.pausa-por-mirada`, a cero se
+desactiva).
+
 Los limites del piso de seguridad (esquemas permitidos, bloqueo de IPs internas) **no** son
 configurables. No se puede desactivar por archivo lo que la constitution declara no
 negociable.
@@ -242,6 +330,11 @@ Sin framework de test para lo trivial. Dos niveles:
    - `Downloader`: corte por bytes con un `Content-Length` mentiroso.
    - `MapConverter`: proporciones (ancha, alta, cuadrada), y transparencia.
    - `FormatSniffer`: cada formato, y un archivo con extension mentirosa.
+   - `PermissionTier`: que gane el nodo mayor, que no se sumen, que el tope global no se
+     pueda superar, y que sin ningun nodo se caiga al valor por defecto.
+   - `Ownership`: posesion compartida, borrado del ultimo poseedor, y la migracion de una
+     entrada sin lista de poseedores.
+   - El contador de mirada seguida: que se reinicie al apartar la vista y no acumule.
 2. **Manual en servidor**, guiado por los 10 criterios de aceptacion del spec 11. Hay cosas
    (TPS, animacion al mirar, reinicio) que solo se comprueban en un servidor real.
 
@@ -253,6 +346,7 @@ Sin framework de test para lo trivial. Dos niveles:
 | R2 | Los ids de mapa de un mundo son finitos | El cache por URL ya evita el derroche. `/imagen listar` y `/imagen purgar` dan control al staff |
 | R3 | `sendMap` envia el mapa entero | Acotado por diseno: un mapa animado por jugador (seccion 5.1). Palanca: bajar fps |
 | R4 | El raytrace puede no alcanzar marcos en chunks lejanos | Rango por defecto 24 bloques, dentro del rango de entidades cargadas |
+| R8 | El evento de la mesa de cartografia no esta verificado contra Paper 26.2. Si no se cubre, ampliar un mapa sigue produciendo un mapa en blanco y el spec 001 seccion 2.4 queda incumplido en su parte importante | Confirmarlo en el javadoc al implementar F11 y probar las dos mesas a mano. La fase no se cierra sin eso |
 | R5 | Un cambio de API entre builds de Paper 26.2 | Solo API publica, sin NMS: el riesgo es bajo. La version exacta de la API queda fijada en el build |
 | **R7** | **La API de mapas que usamos esta marcada para eliminacion**: `MapPalette.imageToBytes`, `MapPalette.getColor(byte)` y `MapCanvas.setPixel(x,y,byte)` compilan con aviso `[removal]` en Paper 26.2. Sus sustitutos (`setPixelColor`/`getPixelColor` con `java.awt.Color`) no sirven aqui: obligarian a guardar 4 bytes por pixel en vez de 1 (un GIF de 100 frames pasaria de 1,6 MB a 6,5 MB) y a hacer la conversion de color en cada render, dentro del hilo principal | Se mantienen los bytes de paleta: es la opcion correcta por rendimiento y tamano. La exposicion se acota a `MapConverter` y `FraMCitRenderer`, y el formato `.fmc` lleva version para poder migrar (F5.14) |
-| **R6** | **Reenlace de DNS**: `HttpClient` resuelve el nombre otra vez al conectar, asi que la conexion puede acabar en una IP que `UrlGuard` nunca valido | **Cerrado en F8.9 (riesgo aceptado)**: Investigado en Java 25. Forzar la IP rompe la verificacion TLS en HTTPS, `InetAddressResolverProvider` afectaria a toda la JVM, y un cliente HTTP manual sobre SSLSocket introduciria riesgos criticos de implementacion. La cache DNS estandar de 30 s de la JVM reduce la ventana a cero, y el plugin alerta activamente al arrancar si la cache esta desactivada (F7.10). Ver constitution 6.1 |
+| **R6** | **Reenlace de DNS**: `HttpClient` resuelve el nombre otra vez al conectar, asi que la conexion puede acabar en una IP que `UrlGuard` nunca valido | **Cerrado en F8.9 (riesgo aceptado)**: Investigado en Java 25. Forzar la IP rompe la verificacion TLS en HTTPS, `InetAddressResolverProvider` afectaria a toda la JVM, y un cliente HTTP manual sobre SSLSocket introduciria riesgos criticos de implementacion. La cache DNS estandar de 30 s de la JVM **estrecha** la ventana y dificulta el ataque en la practica, pero no lo elimina: cada expiracion del TTL abre una ventana nueva. El plugin alerta al arrancar si la cache esta desactivada (F7.10). Ver constitution 6.1 |
