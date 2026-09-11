@@ -12,9 +12,10 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
- * Listener de eventos de Bukkit para limpieza de estado de animación (F6.11).
+ * Listener de eventos de Bukkit para limpieza de estado de animación (F6.11, F12.4).
  *
  * Evita fugas de memoria limpiando el estado inmediatamente cuando:
  * 1. Un jugador se desconecta o es expulsado.
@@ -24,19 +25,33 @@ import java.util.Objects;
 public class FraMCitAnimationListener implements Listener {
 
     private final AnimationManager animationManager;
+    private final GazeTracker gazeTracker;
 
     public FraMCitAnimationListener(AnimationManager animationManager) {
+        this(animationManager, null);
+    }
+
+    public FraMCitAnimationListener(AnimationManager animationManager, GazeTracker gazeTracker) {
         this.animationManager = Objects.requireNonNull(animationManager, "animationManager cannot be null");
+        this.gazeTracker = gazeTracker;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        animationManager.onPlayerQuit(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        animationManager.onPlayerQuit(uuid);
+        if (gazeTracker != null) {
+            gazeTracker.onPlayerQuit(uuid);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerKick(PlayerKickEvent event) {
-        animationManager.onPlayerQuit(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        animationManager.onPlayerQuit(uuid);
+        if (gazeTracker != null) {
+            gazeTracker.onPlayerQuit(uuid);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

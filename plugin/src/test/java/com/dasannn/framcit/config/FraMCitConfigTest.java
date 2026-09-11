@@ -54,6 +54,7 @@ class FraMCitConfigTest {
         assertEquals(FraMCitConfig.DEFAULT_MIN_DELAY_MS, config.getMinDelayMs());
         assertEquals(FraMCitConfig.DEFAULT_GAZE_MAX_DISTANCE, config.getGazeMaxDistance());
         assertEquals(FraMCitConfig.DEFAULT_GAZE_PERIOD_TICKS, config.getGazePeriodTicks());
+        assertEquals(FraMCitConfig.DEFAULT_GAZE_PAUSE_MINUTES, config.getGazePauseMinutes());
         assertEquals(FraMCitConfig.DEFAULT_MAX_CACHE_MB, config.getMaxCacheMb());
 
         // Debe haber avisos para cada clave ausente
@@ -172,6 +173,7 @@ class FraMCitConfigTest {
             animacion:
               distancia-maxima-vision: 32.0
               periodo-rastreo-ticks: 10
+              pausa-por-mirada: 8
             cache:
               tamano-maximo-mb: 256
             economia:
@@ -193,6 +195,8 @@ class FraMCitConfigTest {
         assertEquals(50, config.getMinDelayMs());
         assertEquals(32.0, config.getGazeMaxDistance());
         assertEquals(10, config.getGazePeriodTicks());
+        assertEquals(8, config.getGazePauseMinutes());
+        assertEquals(8 * 60 * 20L, config.getGazePauseTicks());
         assertEquals(256, config.getMaxCacheMb());
         assertEquals(256L * 1024L * 1024L, config.getMaxCacheBytes());
         assertEquals(15.0, config.getImagePrice());
@@ -228,5 +232,44 @@ class FraMCitConfigTest {
         assertEquals(0.0, configInv.getImagePrice(), "Precio inválido debe tratarse como 0.0");
         assertTrue(handler.records.stream().anyMatch(r -> r.getMessage().contains("economia.precio-por-imagen") && r.getMessage().contains("diez euros")),
             "Debe avisar que el precio no es un número");
+    }
+
+    @Test
+    @DisplayName("F12.1 - animacion.pausa-por-mirada por defecto es 5 minutos, a 0 se desactiva y valores negativos caen al por defecto")
+    void testGazePauseMinutesConfig() {
+        Logger logger = Logger.getLogger("TestLogger-GazePause");
+        logger.setUseParentHandlers(false);
+        TestLogHandler handler = new TestLogHandler();
+        logger.addHandler(handler);
+
+        // Caso 1: A cero la regla se desactiva
+        String yamlZero = """
+            animacion:
+              pausa-por-mirada: 0
+            """;
+        FraMCitConfig configZero = FraMCitConfig.load(new StringReader(yamlZero), logger);
+        assertEquals(0, configZero.getGazePauseMinutes());
+        assertEquals(0L, configZero.getGazePauseTicks());
+
+        // Caso 2: Valor configurado positivo (e.g. 10 minutos)
+        String yamlCustom = """
+            animacion:
+              pausa-por-mirada: 10
+            """;
+        FraMCitConfig configCustom = FraMCitConfig.load(new StringReader(yamlCustom), logger);
+        assertEquals(10, configCustom.getGazePauseMinutes());
+        assertEquals(12000L, configCustom.getGazePauseTicks());
+
+        // Caso 3: Valor negativo cae al por defecto (5 minutos = 6000 ticks) con aviso
+        handler.records.clear();
+        String yamlNegative = """
+            animacion:
+              pausa-por-mirada: -3
+            """;
+        FraMCitConfig configNeg = FraMCitConfig.load(new StringReader(yamlNegative), logger);
+        assertEquals(FraMCitConfig.DEFAULT_GAZE_PAUSE_MINUTES, configNeg.getGazePauseMinutes());
+        assertEquals(6000L, configNeg.getGazePauseTicks());
+        assertTrue(handler.records.stream().anyMatch(r -> r.getMessage().contains("animacion.pausa-por-mirada")),
+            "Debe avisar que animacion.pausa-por-mirada es inválido");
     }
 }

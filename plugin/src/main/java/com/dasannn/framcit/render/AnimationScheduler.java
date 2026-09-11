@@ -12,23 +12,34 @@ import java.util.function.LongSupplier;
 import java.util.logging.Logger;
 
 /**
- * Planificador de animaciones de mapas (F6.6, F6.7, F6.9, F6.12).
+ * Planificador de animaciones de mapas (F6.6, F6.7, F6.9, F6.12, F12.5, F12.6, F12.9).
  *
  * Corre cada tick. Avanza ÚNICAMENTE los pares (jugador, mapa) cuyo retardo ya venció
  * y llama a player.sendMap(view) exclusivamente a ese jugador (ancho de banda proporcional).
  * Bucle infinito ignorando repeticiones declaradas del GIF (F6.9).
  * Una excepción dentro del ciclo desactiva solo ese mapa, nunca el ciclo entero (F6.12).
+ * Respeta la pausa por mirada prolongada (F12.5): si el par supera el umbral, congela el frame y omite el envío.
  */
 public class AnimationScheduler implements Runnable {
+
+    @FunctionalInterface
+    public interface GazePauseChecker {
+        boolean isGazePaused(UUID playerUuid, int mapId, UUID frameUuid);
+    }
 
     private final AnimationManager manager;
     private final IntFunction<MapView> mapLookup;
     private final Function<UUID, Player> playerLookup;
     private final LongSupplier timeSupplier;
+    private final GazePauseChecker gazePauseChecker;
     private final Logger logger;
 
     public AnimationScheduler(AnimationManager manager, Logger logger) {
-        this(manager, Bukkit::getMap, Bukkit::getPlayer, System::currentTimeMillis, logger);
+        this(manager, Bukkit::getMap, Bukkit::getPlayer, System::currentTimeMillis, null, logger);
+    }
+
+    public AnimationScheduler(AnimationManager manager, GazePauseChecker gazePauseChecker, Logger logger) {
+        this(manager, Bukkit::getMap, Bukkit::getPlayer, System::currentTimeMillis, gazePauseChecker, logger);
     }
 
     public AnimationScheduler(
@@ -38,10 +49,22 @@ public class AnimationScheduler implements Runnable {
         LongSupplier timeSupplier,
         Logger logger
     ) {
+        this(manager, mapLookup, playerLookup, timeSupplier, null, logger);
+    }
+
+    public AnimationScheduler(
+        AnimationManager manager,
+        IntFunction<MapView> mapLookup,
+        Function<UUID, Player> playerLookup,
+        LongSupplier timeSupplier,
+        GazePauseChecker gazePauseChecker,
+        Logger logger
+    ) {
         this.manager = Objects.requireNonNull(manager, "manager cannot be null");
         this.mapLookup = Objects.requireNonNull(mapLookup, "mapLookup cannot be null");
         this.playerLookup = Objects.requireNonNull(playerLookup, "playerLookup cannot be null");
         this.timeSupplier = Objects.requireNonNull(timeSupplier, "timeSupplier cannot be null");
+        this.gazePauseChecker = gazePauseChecker;
         this.logger = logger;
     }
 
@@ -68,6 +91,11 @@ public class AnimationScheduler implements Runnable {
             Player player = playerLookup.apply(playerUuid);
             if (player == null || !player.isOnline()) {
                 manager.onPlayerQuit(playerUuid);
+                continue;
+            }
+
+            // F12.5, F12.6, F12.8, F12.9: Pausa por mirada prolongada
+            if (gazePauseChecker != null && gazePauseChecker.isGazePaused(playerUuid, mapId, state.getFrameUuid())) {
                 continue;
             }
 

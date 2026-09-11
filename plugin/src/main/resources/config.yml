@@ -96,6 +96,12 @@ animacion:
   # Por defecto: 5 (4 comprobaciones por segundo)
   periodo-rastreo-ticks: 5
 
+  # Tiempo de mirada seguida (en minutos) antes de pausar la animación para ese jugador (F12.1, spec 4.4).
+  # A 0 se desactiva la regla y la animación no se detiene nunca por este motivo.
+  # Mínimo: 0 minutos.
+  # Por defecto: 5
+  pausa-por-mirada: 5
+
 cache:
   # Tamaño máximo de la caché LRU de imágenes en memoria RAM en megabytes (MB).
   # Mínimo: 1 MB.
