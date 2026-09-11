@@ -109,9 +109,13 @@ Obligaciones y resolucion formal (F8.9):
      autenticacion de Mojang y a todos los demas plugins del servidor de forma invasiva.
    - *Cliente HTTP artesanal sobre SSLSocket*: Implicaria reimplementar un parser HTTP/1.1
      manual en la ruta mas sensible del plugin, aumentando drásticamente la superficie de fallos.
-   Por tanto, se acepta formalmente por escrito el riesgo residual bajo la premisa de que la cache
-   de 30 s por defecto de la JVM reduce la ventana de ataque a cero en entornos estandar, y que
-   FraMCit alerta activamente si dicha proteccion se encuentra deshabilitada.
+   Por tanto, se acepta formalmente por escrito el riesgo residual: la cache de 30 s por defecto
+   de la JVM mitiga significativamente el vector al estrechar la ventana temporal y dificultar
+   el ataque en la practica, aunque no lo elimina por completo ya que cada expiracion abre una
+   nueva ventana para reintentos del atacante. Este riesgo residual se asume debido a que las
+   alternativas tecnicas (desactivar la verificacion de hostnames en TLS o registrar un SPI global)
+   introducen vulnerabilidades criticas (MITM) o inestabilidad global en el servidor. FraMCit
+   alerta activamente al arrancar si dicha cache protectora se encuentra deshabilitada.
 
 ## 7. Contenido de terceros
 

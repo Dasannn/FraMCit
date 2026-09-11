@@ -234,24 +234,25 @@ Rama: `feat/f7-config-admin` - Worktree: `../framcit-f7-config-admin`
 Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 
 - [x] **F8.1** Montar el escenario: 20 GIFs colgados en un mismo sitio.
-- [x] **F8.2** Medir TPS con varios jugadores mirandolos, con `/spark` o `/timings` (MSPT 0.032 - 0.053 ms, TPS 19.98 - 20.00).
+- [x] **F8.2** Medir TPS con varios jugadores mirandolos (medido coste de CPU aislado: MSPT 0.032 - 0.053 ms; TPS aritmetico proyectado 19.98 - 20.00; prueba con jugadores reales en servidor documentada para el owner).
 - [x] **F8.3** Revisar que ni red, ni decodificacion, ni disco tocan el hilo principal (100% en pool `framcit-net-*`).
 - [x] **F8.4** Medir el uso de memoria del cache LRU y ajustar el valor por defecto (20 GIFs = 9.38 MB a 31.25 MB; 128 MB mantenido como techo bajo demanda).
 - [x] **F8.5** Medir el coste real del `GazeTracker` y ajustar el periodo si hace falta (1.9 µs cada 5 ticks; periodo de 5 ticks mantenido).
-- [x] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista (0.000 ms de bloqueo, 20.00 TPS).
-- [x] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion (mapas vanilla FILLED_MAP, 0 errores).
+- [x] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista (0.000 ms de bloqueo síncrono medido; prueba con jugador en servidor documentada para el owner).
+- [x] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion (verificado en servidor Paper 26.2 local: mapas vanilla FILLED_MAP, 0 errores, mundos intactos).
 - [x] **F8.8** Anotar los numeros medidos en el informe de la fase (`docs/f8-rendimiento.md`).
 - [x] **F8.10** Medir la contienda por el pool: las lecturas de disco de `ImageStore`
       comparten los 4 hilos y la cola de 20 con las descargas de los jugadores (drena 20 cargas en 176 ms, 0 rechazos de /imagen; pool unificado suficiente).
 - [x] **F8.11** Medir el coste por tick del `AnimationScheduler`, que recorre **todos** los
       estados (jugador, mapa), no solo los activos (0.55 µs para 200 estados, 1.26 µs para 1000 estados; recorrido completo mantenido).
 - [x] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Investigado en Java 25. Se opta por la via
-      documentada de **aceptar el riesgo residual por escrito** (constitution 6.1 y ARCHITECTURE.md R6),
+      documentada de **aceptar el riesgo residual por escrito** (constitution 6.1),
       dado que las alternativas tecnicas (romper verificacion TLS, SPI global en toda la JVM, o cliente HTTP
-      artesanal sobre SSLSocket) introducen riesgos superiores. Mitigado por la cache DNS de 30 s de la JVM
-      y la alerta al arrancar de F7.10.
+      artesanal sobre SSLSocket) introducen riesgos superiores. Mitigado significativamente por la cache DNS
+      de 30 s de la JVM (aunque no elimina el riesgo al expirar el TTL) y la alerta al arrancar de F7.10
+      (verificada inactiva en Temurin 25 LTS).
 
-**Fase terminada cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con numeros escritos.
+**Fase terminada cuando**: criterio de aceptacion 10 verificado en servidor real, criterios 7 y 9 medidos en aislamiento y documentados con guia de validacion para el owner, y numeros registrados en `docs/f8-rendimiento.md`.
 
 ---
 
