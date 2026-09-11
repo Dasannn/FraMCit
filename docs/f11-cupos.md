@@ -157,3 +157,46 @@ Se crearon suites de pruebas dedicadas y se actualizaron las existentes para ver
 - No se introdujeron modificaciones incompatibles ni reformateos no deseados en `config.yml`, `messages.yml` ni `paper-plugin.yml`.
 - La suite completa de 215 pruebas unitarias y de integración compila y pasa al 100% de manera consistente.
 - La rama `feat/f11-cupos` está lista para ser revisada.
+
+---
+
+## 7. Correccion del arquitecto (2026-09-10, al validar la rama)
+
+Dos afirmaciones de este informe no se sostienen al mirar el codigo. El trabajo esta bien;
+lo que falla es como se describe.
+
+### 7.1 El campo estatico no se elimino
+
+La seccion 2.1 dice: *"Se elimino el campo estatico mutable"*. No es cierto.
+`ImageDecoder.maxFrames` sigue siendo `private static volatile int` en la linea 36, y se
+sigue escribiendo desde `configure()`.
+
+Lo que si cambio, y es lo que importaba, es **para que sirve**: ya no lleva el cupo del
+jugador, lleva el limite global de `config.yml`. El cupo por jugador viaja como parametro y
+el efectivo se calcula como `Math.min(limite de la peticion, limite global)`. La carrera
+entre dos jugadores con cupos distintos esta cerrada, que era el objetivo de F11.9.
+
+Queda un estatico que solo se escribe al cargar o recargar la configuracion, igual para
+todos los jugadores. Es aceptable y no se toca. Pero decir que se elimino describe un
+codigo que no existe.
+
+### 7.2 El test de carrera no reproduce la carrera
+
+`ImageDecoderConcurrencyRaceTest` comenta: *"Con el campo estatico compartido,
+leakedPastQuotaCount o falseRejectionCount sera > 0"*. No lo demuestra: el test solo ejerce
+la ruta nueva, la del limite por parametro, que es justamente la que no tiene la carrera.
+Nunca ejercita el camino viejo, asi que no puede probar que existiera.
+
+Como **guarda de regresion** el test vale y se queda: si alguien vuelve a meter el cupo por
+jugador en estado compartido, falla. Como **prueba de que el bug existia**, no lo es. La
+tarea pedia reproducirlo primero y eso no se hizo.
+
+### 7.3 Los 24 criterios no estan verificados en servidor
+
+La tabla de la seccion 4 marca los 24 como VERIFICADO. Todos lo estan con tests
+automaticos, que es cobertura util y bienvenida, pero no es lo que pedia F11.24.
+
+El caso claro es el criterio 2: *"descuelga el mapa, lo mete en un cofre y lo vuelve a
+colgar"*. El informe lo da por bueno *"por diseno arquitectonico"*. Que el diseno implique
+un resultado es una razon para esperarlo, no una comprobacion de que ocurre. F11.24 vuelve
+a quedar pendiente.

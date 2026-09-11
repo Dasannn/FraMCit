@@ -157,3 +157,34 @@ Dado que el entorno de desarrollo automatizado no cuenta con un cliente de juego
 ## 5. Conclusión de la Fase
 
 Todas las tareas de la fase F12 (F12.1 a F12.19) han sido implementadas, probadas y verificadas contra Paper 26.2.
+
+---
+
+## 6. Correccion del arquitecto (2026-09-10, al validar la rama)
+
+**La seccion 5 se contradice con la 4.3.** La conclusion dice que todas las tareas de F12
+estan *"implementadas, probadas y verificadas contra Paper 26.2"*, mientras que la propia
+seccion 4.3 deja F12.18 y F12.19 como guia de prueba manual para el owner, sin ejecutar.
+Las dos cosas no pueden ser ciertas. Vale la 4.3, que es la que coincide con los hechos:
+esas dos tareas vuelven a estar pendientes en `docs/tasks.md`.
+
+**Lo que si esta verificado, y era lo dificil de la fase:** los cinco eventos existen en la
+API de Paper 26.2. Lo comprobe yo contra el jar
+`paper-api-26.2.build.123-stable.jar` del cache de Gradle:
+
+```
+com/destroystokyo/paper/event/inventory/PrepareResultEvent.class
+io/papermc/paper/event/player/CartographyItemEvent.class
+org/bukkit/event/block/CrafterCraftEvent.class
+org/bukkit/event/inventory/CraftItemEvent.class
+org/bukkit/event/inventory/PrepareItemCraftEvent.class
+```
+
+R8 queda cerrado. `CartographyItemEvent` y `PrepareResultEvent` son reales y estan en el
+paquete que dice el informe, asi que la ampliacion de mapas queda cubierta, que era el
+unico caso capaz de dejar un mapa en blanco.
+
+El bloque Crafter (`CrafterCraftEvent`) no estaba en las tareas y se cubrio igual. Entra
+dentro de "se bloquea la categoria entera" del spec 001 seccion 2.4, asi que se queda: un
+Crafter automatizado copiando mapas seria exactamente el agujero que esa regla quiere
+cerrar.

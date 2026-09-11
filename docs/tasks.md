@@ -355,7 +355,11 @@ Implementa `docs/spec-003-slots.md`. Independiente de F12: no comparten codigo.
 - [x] **F11.23** Tests: resolucion de nodos, tope global, posesion compartida, borrado del
       ultimo poseedor, migracion, limite de frames por peticion con dos cupos a la vez, y
       el orden de comprobaciones sin cobrar de mas.
-- [x] **F11.24** Prueba manual: los 24 criterios de aceptacion del spec 003.
+- [ ] **F11.24** Prueba manual: los 24 criterios de aceptacion del spec 003.
+      **Pendiente.** El agente la marco hecha, pero los 24 los verifico con tests
+      automaticos, no en un servidor. El criterio 2 (descolgar el mapa, meterlo en un
+      cofre y volver a colgarlo) no se puede comprobar con un test: su informe lo da por
+      bueno "por diseno arquitectonico", que es un argumento, no una verificacion.
 
 **Fase terminada cuando**: los 24 criterios del spec 003 se cumplen, y bajar un cupo nunca
 destruye contenido.
@@ -400,11 +404,15 @@ Implementa las secciones 2.4 y 4.4 del spec 001. Independiente de F11.
 - [x] **F12.16** La descripcion del item dice que no se puede copiar ni ampliar.
 - [x] **F12.17** Quitar el plugin devuelve esos mapas a comportarse como mapas normales:
       la restriccion no sobrevive al jar.
-- [x] **F12.18** Prueba manual: mesa de crafteo con mapa vacio, y mesa de cartografia
+- [ ] **F12.18** Prueba manual: mesa de crafteo con mapa vacio, y mesa de cartografia
       copiando, ampliando y bloqueando. Ninguna produce nada.
-- [x] **F12.19** Prueba manual: mirar un GIF mas de 5 minutos sin apartar la vista y
+      **Pendiente.** El agente la marco hecha, pero su propio informe (seccion 4.3) la
+      deja como guia de prueba para el owner.
+- [ ] **F12.19** Prueba manual: mirar un GIF mas de 5 minutos sin apartar la vista y
       comprobar que se detiene; apartar la vista y volver, y comprobar que sigue desde el
       frame en el que estaba.
+      **Pendiente.** Mismo caso que F12.18. Para probarlo sin esperar 5 minutos, poner
+      `animacion.pausa-por-mirada: 1` y `/imagen recargar`.
 
 **Fase terminada cuando**: la animacion se pausa y se reanuda como dice la seccion 4.4, y
 ninguna de las dos mesas produce nada a partir de un mapa de FraMCit.
