@@ -301,6 +301,116 @@ arrancando y funcionando en un servidor sin Vault.
 
 ---
 
+## F11 - Cupos por jugador (spec 003)
+
+Rama: `feat/f11-cupos` - Worktree: `../framcit-f11-cupos`
+
+Implementa `docs/spec-003-slots.md`. Independiente de F12: no comparten codigo.
+
+- [ ] **F11.1** `PermissionTier`: dada una familia de nodos (`framcit.slots.`,
+      `framcit.frames.`), devolver el numero mas alto concedido. Gana el mayor, no se
+      suman. Sin ningun nodo, el valor por defecto de `config.yml`.
+- [ ] **F11.2** Declarar en `paper-plugin.yml`: `framcit.slots.1/2/3` (`false`),
+      `framcit.slots.ilimitado` (`op`), y `framcit.frames.10/25/50/100` (`false`).
+- [ ] **F11.3** `config.yml`: `slots.por-defecto` (1), `slots.maximo-nodo` (10),
+      `frames.por-defecto` (100, igual al limite global) y `frames.maximo-nodo` (100).
+      Un valor invalido cae al por defecto con aviso, nunca deja el comando inutilizable.
+- [ ] **F11.4** [SEC] El cupo de frames de un jugador **nunca** supera el limite global de
+      `config.yml`. El efectivo es el menor de los dos. Conceder `framcit.frames.500` no
+      sube el techo del servidor: es el piso de seguridad de la constitution 6.6.
+- [ ] **F11.5** Posesion dentro de `index.json`: lista de UUIDs por entrada. No se crea
+      ningun archivo nuevo.
+- [ ] **F11.6** Migracion al cargar: una entrada sin lista de poseedores estrena una con su
+      autor dentro. Autor desconocido: sin poseedores, y **no se borra**.
+- [ ] **F11.7** `QuotaService`: si a un jugador le cabe otra imagen, y cuantos frames puede
+      tener la que pide.
+- [ ] **F11.8** Los cupos se resuelven en el **hilo principal** antes de despachar al pool.
+      Lo que viaja es un numero, no el jugador.
+- [ ] **F11.9** [BUG] `ImageDecoder` deja de llevar el limite de frames en un campo
+      estatico y lo recibe por parametro. Con 4 descargas simultaneas, dos jugadores con
+      cupos distintos se pisan el limite: el de cupo 10 colaria 50. Test que lo demuestre.
+- [ ] **F11.10** Orden de comprobaciones del spec 003 seccion 4, integrado con el cobro del
+      spec 002. Sin slot no se mira el saldo ni se descarga nada.
+- [ ] **F11.11** Acierto de cache: ocupa slot igual, y el cupo de frames se comprueba
+      **antes de descargar y antes de mirar el saldo**, porque el recuento ya esta en el
+      indice.
+- [ ] **F11.12** URL que el jugador **ya posee**: entrega otra copia del item y el cupo no
+      se mueve. Se sigue cobrando (spec 002).
+- [ ] **F11.13** Re-comprobar el slot justo antes de entregar. Si se lleno durante la
+      descarga: no se entrega, **no se cobra**, y se explica por que.
+- [ ] **F11.14** Rechazo por cupo de frames: no se cobra y no queda nada en disco.
+- [ ] **F11.15** `/imagen mias`: lo que posee quien lo ejecuta, con su cupo usado.
+- [ ] **F11.16** `/imagen borrar <id>` con `confirmar` obligatorio, y los dos textos de
+      aviso (ultimo poseedor o posesion compartida).
+- [ ] **F11.17** El archivo de disco se borra **solo** cuando no queda ningun poseedor. Con
+      otros poseedores, no cambia nada para ellos.
+- [ ] **F11.18** `/imagen listar [jugador] [pagina]`.
+- [ ] **F11.19** `/imagen uso [jugador]`: imagenes, frames, disco medido, memoria **cargada
+      ahora mismo** en el cache LRU, y cuantas se estan animando. Ningun numero puede ser
+      una proyeccion presentada como medida.
+- [ ] **F11.20** `/imagen purgar-jugador <jugador>` con `confirmar` obligatorio, respetando
+      la posesion compartida, y con registro en el log de quien lo ejecuto y sobre quien.
+- [ ] **F11.21** Mensajes de la seccion 9 del spec 003 en `messages.yml`.
+- [ ] **F11.22** Bajar un cupo por debajo de lo que un jugador ya tiene **no borra nada**.
+- [ ] **F11.23** Tests: resolucion de nodos, tope global, posesion compartida, borrado del
+      ultimo poseedor, migracion, limite de frames por peticion con dos cupos a la vez, y
+      el orden de comprobaciones sin cobrar de mas.
+- [ ] **F11.24** Prueba manual: los 24 criterios de aceptacion del spec 003.
+
+**Fase terminada cuando**: los 24 criterios del spec 003 se cumplen, y bajar un cupo nunca
+destruye contenido.
+
+---
+
+## F12 - Pausa por mirada y mapa inerte (enmiendas del spec 001)
+
+Rama: `feat/f12-pausa-inerte` - Worktree: `../framcit-f12-pausa-inerte`
+
+Implementa las secciones 2.4 y 4.4 del spec 001. Independiente de F11.
+
+- [ ] **F12.1** `config.yml`: `animacion.pausa-por-mirada`, por defecto 5 minutos. A cero
+      la regla se desactiva y la animacion no se detiene nunca por este motivo.
+- [ ] **F12.2** `GazeTracker` guarda, por par (jugador, marco), el tick en que empezo a
+      mirar. Mientras siga mirando no se toca.
+- [ ] **F12.3** Al dejar de mirar, la entrada se borra. Eso es lo que hace que el contador
+      sea de mirada **seguida** y no acumulada: no hay nada que acumular.
+- [ ] **F12.4** El estado de un jugador se vacia entero al desconectarse.
+- [ ] **F12.5** `AnimationScheduler` no envia frames a un par que supere el umbral.
+      Pregunta, no lleva cuenta propia.
+- [ ] **F12.6** Al pausarse, el mapa se queda en el frame en el que estaba. No se reinicia
+      al primero ni se pone en blanco.
+- [ ] **F12.7** Se reanuda apartando la vista y volviendo a mirar. Ese es el unico
+      disparador.
+- [ ] **F12.8** Aplica igual al mapa sostenido en la mano (spec 001 seccion 4.3).
+- [ ] **F12.9** Pausar **no** descarga la imagen ni la saca del cache LRU. Lo unico que se
+      deja de hacer es enviar paquetes.
+- [ ] **F12.10** Tests del contador: que se reinicie al apartar la vista, que no acumule, y
+      que a cero la regla quede desactivada.
+- [ ] **F12.11** [R8] **Verificar en el javadoc de Paper 26.2 el evento de la mesa de
+      cartografia antes de escribir el listener.** No dar por bueno ningun nombre de
+      evento sin comprobarlo. Anotar en el informe cual es y donde se verifico.
+- [ ] **F12.12** `CraftGuard`: si un ingrediente lleva la marca de FraMCit, el resultado
+      sale vacio. Mesa de crafteo, con `PrepareItemCraftEvent`.
+- [ ] **F12.13** Lo mismo para la mesa de cartografia, con el evento verificado en F12.11.
+      Cubre copiar, ampliar y bloquear.
+- [ ] **F12.14** El item nunca se consume ni se destruye: el jugador recupera sus
+      ingredientes tal cual.
+- [ ] **F12.15** Se bloquea la categoria entera, no una lista de recetas. Una lista habria
+      que mantenerla cada vez que Minecraft anada una receta que consuma mapas.
+- [ ] **F12.16** La descripcion del item dice que no se puede copiar ni ampliar.
+- [ ] **F12.17** Quitar el plugin devuelve esos mapas a comportarse como mapas normales:
+      la restriccion no sobrevive al jar.
+- [ ] **F12.18** Prueba manual: mesa de crafteo con mapa vacio, y mesa de cartografia
+      copiando, ampliando y bloqueando. Ninguna produce nada.
+- [ ] **F12.19** Prueba manual: mirar un GIF mas de 5 minutos sin apartar la vista y
+      comprobar que se detiene; apartar la vista y volver, y comprobar que sigue desde el
+      frame en el que estaba.
+
+**Fase terminada cuando**: la animacion se pausa y se reanuda como dice la seccion 4.4, y
+ninguna de las dos mesas produce nada a partir de un mapa de FraMCit.
+
+---
+
 ## Resumen
 
 | Fase | Tareas | Depende de |
@@ -315,6 +425,11 @@ arrancando y funcionando en un servidor sin Vault.
 | F7 config y admin | 10 | F6 |
 | F8 rendimiento | 11 | F7 |
 | F10 economia (spec 002) | 17 | F7 |
+| F11 cupos (spec 003) | 24 | F10 |
+| F12 pausa y mapa inerte | 19 | F6 |
 
-Total: 122 tareas. F9 (Validacion en Aternos, 6 tareas) se elimino el 2026-09-10:
+Total: 165 tareas. F9 (Validacion en Aternos, 6 tareas) se elimino el 2026-09-10:
 Aternos no admite plugins propios y dejo de ser el destino.
+
+F11 y F12 se anadieron el 2026-09-10 y pueden ir en paralelo: no comparten codigo, solo
+coinciden en `config.yml` y `messages.yml`.

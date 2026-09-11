@@ -142,6 +142,39 @@ El nucleo del proyecto.
 - **Hecho cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con los numeros anotados en
   el propio informe de la fase.
 
+### F11 - Cupos por jugador (spec 003)
+
+Implementa `docs/spec-003-slots.md` entero: el cupo de imagenes poseidas y el cupo de
+frames por imagen, los comandos que los acompanan, y el registro de posesion.
+
+- Resolucion de nodos escalonados y los dos valores por defecto de `config.yml`.
+- Posesion dentro de `index.json`, con migracion de lo que ya existe.
+- El orden de comprobaciones de la seccion 4 del spec 003, integrado con el cobro del
+  spec 002.
+- Comandos de jugador (`mias`, `borrar`) y de staff (`uso`, `purgar-jugador`, `listar`
+  filtrado).
+- **Refactor obligatorio**: `ImageDecoder` deja de llevar el limite de frames en un campo
+  estatico. Es una condicion de carrera con 4 descargas simultaneas, no una preferencia
+  de estilo.
+- **Hecho cuando**: los 24 criterios de aceptacion del spec 003 se cumplen.
+
+### F12 - Pausa por mirada y mapa inerte (enmiendas del spec 001)
+
+Implementa las secciones 2.4 y 4.4 del spec 001, anadidas el 2026-09-10.
+
+- Pausa de la animacion tras una mirada seguida mas larga que el umbral, por jugador y por
+  marco, apoyada en el ciclo que ya tiene `GazeTracker`.
+- El mapa de FraMCit queda inerte para el crafteo y la cartografia.
+- **Riesgo R8, y es el trabajo de verdad de esta fase**: el evento de la mesa de
+  cartografia no esta verificado contra Paper 26.2. Confirmarlo en el javadoc antes de
+  escribir el listener. Si no se cubre, ampliar un mapa sigue dando un mapa en blanco y la
+  regla queda incumplida en lo que importa.
+- **Hecho cuando**: la animacion se detiene y se reanuda como describe la seccion 4.4, y
+  ninguna de las dos mesas produce nada a partir de un mapa de FraMCit.
+
+F11 y F12 son **independientes**: no comparten codigo. Solo se tocan en `config.yml` y
+`messages.yml`, que se resuelven al fusionar. Pueden ir en paralelo.
+
 ## 5. Orden y dependencias
 
 ```
@@ -152,7 +185,13 @@ F1 esqueleto -> F2 seguridad -> F3 imagen -> F4 estatico -> F5 persistencia -> F
                                                                  F7 config/admin <--/
                                                                         |
                                                                  F8 rendimiento
+
+F7 config/admin -> F10 economia (spec 002)
+F10 economia ----> F11 cupos (spec 003)
+F6 animacion ----> F12 pausa por mirada y mapa inerte
 ```
+
+F11 y F12 vuelven a abrir el paralelismo: son ramas distintas del arbol, como lo fue F0.
 
 F0 es el unico que corre en paralelo. El resto es una cadena: cada fase se apoya en la
 anterior.
@@ -170,3 +209,4 @@ multi-version, y envio de columnas parciales por paquetes crudos.
 | R1 | WEBP animado sin verificar | F0 | Spike antes de disenar el decodificador |
 | A2 | `plugin/` es un repositorio anidado | F1 | Borrar `plugin/.git`, previa confirmacion del owner |
 | A3 | El servidor de destino puede limitar RAM y disco | - | Ajustar el cache en memoria y avisar del consumo de `images/` cuando se conozca el destino |
+| R8 | El evento de la mesa de cartografia no esta verificado contra Paper 26.2 | F12 | Confirmarlo en el javadoc antes de escribir el listener, y probar las dos mesas a mano |
