@@ -111,3 +111,23 @@ economia:
   # Mínimo: 0.0
   # Por defecto: 0.0
   precio-por-imagen: 0.0
+
+slots:
+  # Cupo de quien no tiene ningun nodo framcit.slots.<n>.
+  # 0 deja el comando inutilizable para quien no tenga nodo.
+  # Un valor negativo o invalido se trata como 1 con aviso en el log.
+  # Por defecto: 1
+  por-defecto: 1
+  # Hasta que numero se buscan nodos framcit.slots.<n>.
+  # Por defecto: 10
+  maximo-nodo: 10
+
+frames:
+  # Frames maximos por imagen para quien no tiene ningun nodo framcit.frames.<n>.
+  # Por defecto igual al limite global del spec 001: sin configurar, nada cambia.
+  # Un valor negativo o invalido se trata como el limite global con aviso en el log.
+  # Por defecto: 100
+  por-defecto: 100
+  # Hasta que numero se buscan nodos framcit.frames.<n>.
+  # Por defecto: 100
+  maximo-nodo: 100

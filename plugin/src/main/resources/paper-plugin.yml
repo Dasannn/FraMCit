@@ -20,3 +20,27 @@ permissions:
   framcit.gratis:
     description: Permite crear imagenes sin pagar
     default: false
+  framcit.slots.1:
+    description: Permite poseer hasta 1 imagen
+    default: false
+  framcit.slots.2:
+    description: Permite poseer hasta 2 imagenes
+    default: false
+  framcit.slots.3:
+    description: Permite poseer hasta 3 imagenes
+    default: false
+  framcit.slots.ilimitado:
+    description: Permite poseer imagenes sin limite de cupo
+    default: op
+  framcit.frames.10:
+    description: Permite imagenes de hasta 10 frames
+    default: false
+  framcit.frames.25:
+    description: Permite imagenes de hasta 25 frames
+    default: false
+  framcit.frames.50:
+    description: Permite imagenes de hasta 50 frames
+    default: false
+  framcit.frames.100:
+    description: Permite imagenes de hasta 100 frames
+    default: false

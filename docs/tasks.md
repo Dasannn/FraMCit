@@ -307,15 +307,15 @@ Rama: `feat/f11-cupos` - Worktree: `../framcit-f11-cupos`
 
 Implementa `docs/spec-003-slots.md`. Independiente de F12: no comparten codigo.
 
-- [ ] **F11.1** `PermissionTier`: dada una familia de nodos (`framcit.slots.`,
+- [x] **F11.1** `PermissionTier`: dada una familia de nodos (`framcit.slots.`,
       `framcit.frames.`), devolver el numero mas alto concedido. Gana el mayor, no se
       suman. Sin ningun nodo, el valor por defecto de `config.yml`.
-- [ ] **F11.2** Declarar en `paper-plugin.yml`: `framcit.slots.1/2/3` (`false`),
+- [x] **F11.2** Declarar en `paper-plugin.yml`: `framcit.slots.1/2/3` (`false`),
       `framcit.slots.ilimitado` (`op`), y `framcit.frames.10/25/50/100` (`false`).
-- [ ] **F11.3** `config.yml`: `slots.por-defecto` (1), `slots.maximo-nodo` (10),
+- [x] **F11.3** `config.yml`: `slots.por-defecto` (1), `slots.maximo-nodo` (10),
       `frames.por-defecto` (100, igual al limite global) y `frames.maximo-nodo` (100).
       Un valor invalido cae al por defecto con aviso, nunca deja el comando inutilizable.
-- [ ] **F11.4** [SEC] El cupo de frames de un jugador **nunca** supera el limite global de
+- [x] **F11.4** [SEC] El cupo de frames de un jugador **nunca** supera el limite global de
       `config.yml`. El efectivo es el menor de los dos. Conceder `framcit.frames.500` no
       sube el techo del servidor: es el piso de seguridad de la constitution 6.6.
 - [ ] **F11.5** Posesion dentro de `index.json`: lista de UUIDs por entrada. No se crea

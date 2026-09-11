@@ -39,6 +39,11 @@ public class FraMCitConfig {
 
     public static final double DEFAULT_IMAGE_PRICE = 0.0;
 
+    public static final int DEFAULT_SLOTS_DEFAULT = 1;
+    public static final int DEFAULT_SLOTS_MAX_NODE = 10;
+    public static final int DEFAULT_FRAMES_DEFAULT = 100;
+    public static final int DEFAULT_FRAMES_MAX_NODE = 100;
+
     // Mínimos permitidos para prevenir configuraciones peligrosas
     public static final int MIN_CONNECT_TIMEOUT_SECONDS = 1;
     public static final int MIN_READ_TIMEOUT_SECONDS = 1;
@@ -59,6 +64,11 @@ public class FraMCitConfig {
 
     public static final double MIN_IMAGE_PRICE = 0.0;
 
+    public static final int MIN_SLOTS_DEFAULT = 0;
+    public static final int MIN_SLOTS_MAX_NODE = 1;
+    public static final int MIN_FRAMES_DEFAULT = 1;
+    public static final int MIN_FRAMES_MAX_NODE = 1;
+
     private final int connectTimeoutSeconds;
     private final int readTimeoutSeconds;
     private final int maxDownloadSizeMb;
@@ -78,6 +88,11 @@ public class FraMCitConfig {
 
     private final double imagePrice;
 
+    private final int defaultSlots;
+    private final int maxSlotsNode;
+    private final int defaultFrames;
+    private final int maxFramesNode;
+
     public FraMCitConfig(
         int connectTimeoutSeconds,
         int readTimeoutSeconds,
@@ -94,6 +109,48 @@ public class FraMCitConfig {
         int maxCacheMb,
         double imagePrice
     ) {
+        this(
+            connectTimeoutSeconds,
+            readTimeoutSeconds,
+            maxDownloadSizeMb,
+            maxRedirects,
+            downloadThreads,
+            queueCapacity,
+            maxDimension,
+            maxFrames,
+            defaultDelayMs,
+            minDelayMs,
+            gazeMaxDistance,
+            gazePeriodTicks,
+            maxCacheMb,
+            imagePrice,
+            DEFAULT_SLOTS_DEFAULT,
+            DEFAULT_SLOTS_MAX_NODE,
+            maxFrames,
+            DEFAULT_FRAMES_MAX_NODE
+        );
+    }
+
+    public FraMCitConfig(
+        int connectTimeoutSeconds,
+        int readTimeoutSeconds,
+        int maxDownloadSizeMb,
+        int maxRedirects,
+        int downloadThreads,
+        int queueCapacity,
+        int maxDimension,
+        int maxFrames,
+        int defaultDelayMs,
+        int minDelayMs,
+        double gazeMaxDistance,
+        int gazePeriodTicks,
+        int maxCacheMb,
+        double imagePrice,
+        int defaultSlots,
+        int maxSlotsNode,
+        int defaultFrames,
+        int maxFramesNode
+    ) {
         this.connectTimeoutSeconds = connectTimeoutSeconds;
         this.readTimeoutSeconds = readTimeoutSeconds;
         this.maxDownloadSizeMb = maxDownloadSizeMb;
@@ -108,6 +165,10 @@ public class FraMCitConfig {
         this.gazePeriodTicks = gazePeriodTicks;
         this.maxCacheMb = maxCacheMb;
         this.imagePrice = imagePrice;
+        this.defaultSlots = defaultSlots;
+        this.maxSlotsNode = maxSlotsNode;
+        this.defaultFrames = defaultFrames;
+        this.maxFramesNode = maxFramesNode;
     }
 
     /**
@@ -128,7 +189,11 @@ public class FraMCitConfig {
             DEFAULT_GAZE_MAX_DISTANCE,
             DEFAULT_GAZE_PERIOD_TICKS,
             DEFAULT_MAX_CACHE_MB,
-            DEFAULT_IMAGE_PRICE
+            DEFAULT_IMAGE_PRICE,
+            DEFAULT_SLOTS_DEFAULT,
+            DEFAULT_SLOTS_MAX_NODE,
+            DEFAULT_FRAMES_DEFAULT,
+            DEFAULT_FRAMES_MAX_NODE
         );
     }
 
@@ -187,6 +252,19 @@ public class FraMCitConfig {
 
         double imagePrice = getDouble(config, "economia.precio-por-imagen", DEFAULT_IMAGE_PRICE, MIN_IMAGE_PRICE, logger);
 
+        int defaultSlots = getInt(config, "slots.por-defecto", DEFAULT_SLOTS_DEFAULT, MIN_SLOTS_DEFAULT, logger);
+        int maxSlotsNode = getInt(config, "slots.maximo-nodo", DEFAULT_SLOTS_MAX_NODE, MIN_SLOTS_MAX_NODE, logger);
+
+        // Spec 7: frames.por-defecto por defecto igual al limite global de frames (maxF).
+        int defaultFrames = getInt(config, "frames.por-defecto", maxF, MIN_FRAMES_DEFAULT, logger);
+        if (defaultFrames > maxF) {
+            if (logger != null) {
+                logger.warning(String.format("frames.por-defecto (%d) supera el límite global (%d). Acotado a %d.", defaultFrames, maxF, maxF));
+            }
+            defaultFrames = maxF;
+        }
+        int maxFramesNode = getInt(config, "frames.maximo-nodo", DEFAULT_FRAMES_MAX_NODE, MIN_FRAMES_MAX_NODE, logger);
+
         return new FraMCitConfig(
             connectTimeout,
             readTimeout,
@@ -201,7 +279,11 @@ public class FraMCitConfig {
             maxDist,
             periodTicks,
             maxCacheMb,
-            imagePrice
+            imagePrice,
+            defaultSlots,
+            maxSlotsNode,
+            defaultFrames,
+            maxFramesNode
         );
     }
 
@@ -371,5 +453,21 @@ public class FraMCitConfig {
 
     public double getImagePrice() {
         return imagePrice;
+    }
+
+    public int getDefaultSlots() {
+        return defaultSlots;
+    }
+
+    public int getMaxSlotsNode() {
+        return maxSlotsNode;
+    }
+
+    public int getDefaultFrames() {
+        return defaultFrames;
+    }
+
+    public int getMaxFramesNode() {
+        return maxFramesNode;
     }
 }
