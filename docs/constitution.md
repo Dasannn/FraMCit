@@ -28,8 +28,8 @@ Tres specs:
 
 - **Spec 001** (`docs/spec.md`): imagenes y GIFs en marcos.
 - **Spec 002** (`docs/spec-002-economia.md`): cobro opcional por imagen mediante Vault.
-- **Spec 003** (`docs/spec-003-slots.md`): cupo de imagenes por jugador segun sus nodos
-  de permiso.
+- **Spec 003** (`docs/spec-003-slots.md`): cupos por jugador segun sus nodos de permiso,
+  tanto de imagenes acumuladas como de frames por imagen.
 
 Dentro del alcance:
 - Comando que entrega al jugador un item mapa con la imagen de una URL.
@@ -37,7 +37,7 @@ Dentro del alcance:
 - Animacion de GIF unicamente para jugadores que miran el marco.
 - Persistencia: las imagenes sobreviven al reinicio del servidor.
 - Cobro opcional por imagen, desactivado mientras no se configure.
-- Cupo de imagenes por jugador, graduable con nodos de permiso.
+- Cupo de imagenes por jugador y de frames por imagen, graduables con nodos de permiso.
 
 Fuera del alcance (requiere aprobacion nueva para entrar):
 - Busqueda de imagenes por palabras clave / integracion con APIs de Google u otras.
@@ -76,10 +76,12 @@ Una dependencia que impida arrancar es un fallo de diseno, no una funcionalidad.
    puede usarlo, no se limita.
 
    > **Enmienda del 2026-09-10 (segunda).** El *limite de mapas por jugador* sale de esta
-   > lista de prohibiciones y pasa a existir, con la forma de un cupo de imagenes poseidas
-   > graduable por nodos de permiso (`docs/spec-003-slots.md`). Sigue cumpliendo el
-   > principio: el plugin declara los nodos, el administrador decide quien recibe cuantos.
-   > El cooldown y la lista blanca siguen prohibidos.
+   > lista de prohibiciones y pasa a existir, con dos formas graduables por nodos de
+   > permiso (`docs/spec-003-slots.md`): un cupo de imagenes poseidas y un cupo de frames
+   > por imagen. Sigue cumpliendo el principio: el plugin declara los nodos, el
+   > administrador decide quien recibe cuantos. El cupo de frames ademas nunca puede
+   > superar el limite global de la seccion 6.6, que es piso de seguridad y no se negocia
+   > con permisos. El cooldown y la lista blanca siguen prohibidos.
 
    > **Enmienda del 2026-09-10.** Hasta esta fecha el principio era *acceso abierto*
    > (`default: true`, cualquier jugador). El owner decidio cerrarlo por defecto tras

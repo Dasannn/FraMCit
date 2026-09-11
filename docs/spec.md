@@ -164,6 +164,7 @@ Rechazo con mensaje explicativo si se supera cualquiera de estos:
 |---|---|
 | Tamano maximo de descarga | 5 MB |
 | Frames maximos de un GIF | 100 |
+| Frames maximos por jugador | segun sus nodos, nunca por encima del limite global (spec 003) |
 | Frames por segundo maximos | 10 |
 | Dimensiones maximas de origen | 4096 x 4096 pixeles |
 | Timeout de conexion | 5 segundos |

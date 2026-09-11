@@ -1,16 +1,24 @@
-# Spec 003 - Slots por jugador
+# Spec 003 - Cupos por jugador
 
-Tercer spec de FraMCit. Limita **cuantas imagenes puede tener a la vez** cada jugador,
-segun los nodos de permiso que le haya dado el administrador.
+Tercer spec de FraMCit. Limita, segun los nodos de permiso que el administrador le haya
+dado a cada jugador:
+
+- **cuantas imagenes** puede tener a la vez (slots), y
+- **cuantos frames** puede tener una imagen suya (control de memoria).
 
 Depende de `docs/spec.md` (spec 001) y convive con `docs/spec-002-economia.md` (spec 002).
 Requiere las enmiendas de la constitution seccion 3 y 4.2 fechadas el 2026-09-10.
 
 ## 1. Que resuelve
 
-Hoy un jugador con `framcit.imagen` puede crear imagenes sin limite. Este spec introduce
-un cupo por jugador, graduable con permisos, para que el staff pueda dar mas margen a unos
-rangos que a otros sin tocar configuracion por jugador.
+Hoy un jugador con `framcit.imagen` puede crear imagenes sin limite, y cualquiera puede
+subir un GIF de 100 frames. Este spec introduce dos cupos por jugador, graduables con
+permisos, para que el staff pueda dar mas margen a unos rangos que a otros sin tocar
+configuracion por jugador.
+
+Los dos cupos son independientes y miden cosas distintas: los **slots** limitan cuantas
+imagenes acumula un jugador, el **cupo de frames** limita cuanta memoria puede costar cada
+una. Un jugador puede tener 3 slots y solo 10 frames por imagen.
 
 Lo que **no** introduce, y sigue fuera del proyecto salvo aprobacion nueva: cooldown entre
 usos, lista blanca de dominios, cupos por mundo, y transferir imagenes entre jugadores.
@@ -58,6 +66,8 @@ un contador.
 
 ## 3. Nodos de permiso
 
+### 3.0 Cupo de imagenes (slots)
+
 | Nodo | Por defecto | Efecto |
 |---|---|---|
 | `framcit.slots.1` | `false` | El jugador puede tener 1 imagen |
@@ -79,28 +89,90 @@ los gestores de permisos; los demas funcionan igual si el administrador los conc
 El plugin **declara** los nodos y pregunta por ellos. A quien se le conceden es decision
 del administrador, como manda la constitution seccion 4.2.
 
-### 3.1 Bajar el cupo no borra nada
+### 3.1 Bajar un cupo no borra nada
 
 Si un administrador reduce el cupo de un jugador que ya esta por encima, no se borra
 ninguna imagen. El jugador simplemente no puede crear mas hasta que baje del limite por su
-cuenta. El plugin nunca destruye contenido por un cambio de permisos.
+cuenta. Vale igual para los slots y para los frames: una imagen de 80 frames no desaparece
+porque a su dueno le bajen el cupo a 25. El plugin nunca destruye contenido por un cambio
+de permisos.
 
-## 4. Cuando se comprueba el cupo
+### 3.2 Cupo de frames por jugador
 
-El cupo se comprueba **dos veces**, por la misma razon por la que el spec 002 comprueba el
-saldo dos veces: entre el principio y el final de una descarga puede cambiar todo.
+El segundo cupo, y el que de verdad controla la memoria. Cada frame de un mapa ocupa
+**16384 bytes fijos** (128 x 128 pixeles de paleta), asi que limitar frames limita RAM y
+disco de forma directa y predecible: 100 frames son 1.6 MB, 20 frames son 320 KB.
+
+| Nodo | Por defecto | Efecto |
+|---|---|---|
+| `framcit.frames.10` | `false` | Imagenes de hasta 10 frames |
+| `framcit.frames.25` | `false` | Hasta 25 frames |
+| `framcit.frames.50` | `false` | Hasta 50 frames |
+| `framcit.frames.100` | `false` | Hasta 100 frames |
+
+Mismas reglas que los slots:
+
+1. Varios nodos `framcit.frames.<n>`: **gana el mayor**, no se suman.
+2. Sin ningun nodo, se aplica `frames.por-defecto` de `config.yml`.
+3. El plugin busca de `framcit.frames.1` hasta `frames.maximo-nodo`. Los cuatro escalones
+   de la tabla se declaran en `paper-plugin.yml`; cualquier otro numero funciona igual si
+   el administrador lo concede.
+
+**El limite global del spec 001 no se puede superar nunca.** El cupo efectivo de un jugador
+es el menor entre su nodo y el limite de `config.yml` (por defecto 100 frames). Conceder
+`framcit.frames.500` no sube el techo del servidor: sigue siendo 100. Ese limite es parte
+del piso de seguridad de la constitution seccion 6.6 (bomba de descompresion) y ningun
+permiso lo levanta.
+
+No existe un nodo de frames ilimitados, por lo mismo.
+
+### 3.3 Donde se aplica el cupo de frames
+
+El numero de frames se conoce **antes** de decodificarlos: el decodificador ya lee el
+recuento declarado del archivo y lo compara con el limite antes de construir ningun frame.
+El cupo por jugador se comprueba en ese mismo punto, asi que un GIF que excede el cupo se
+rechaza sin llegar a ocupar memoria. Ese es el objetivo entero de este cupo.
+
+Casos:
+
+1. **Imagen nueva**: se descarga, se lee el recuento de frames, y si supera el cupo del
+   jugador se rechaza ahi. **No se cobra** (spec 002), porque el cobro es a la entrega.
+   El archivo no se guarda en disco.
+2. **Acierto de cache**: el recuento ya esta en el indice, asi que se comprueba **antes de
+   descargar nada y antes de mirar el saldo**. Poseer una imagen de 80 frames consume la
+   misma memoria tanto si la creaste tu como si la heredaste del cache.
+3. **Imagenes que ya posees**: no se re-comprueba. Bajarle el cupo de frames a un jugador
+   no le borra lo que ya tiene, igual que con los slots (seccion 3.1).
+
+> **Nota de implementacion, no de requisito.** Hoy el limite de frames vive en un campo
+> estatico compartido (`ImageDecoder.maxFrames`). Con hasta 4 descargas simultaneas, un
+> limite por jugador no puede vivir en estado estatico: dos jugadores con cupos distintos
+> descargando a la vez se pisarian el limite. El cupo tiene que viajar como parametro de la
+> peticion de decodificacion. Se detalla en ARCHITECTURE.
+
+## 4. Cuando se comprueban los cupos
+
+El cupo de slots se comprueba **dos veces**, por la misma razon por la que el spec 002
+comprueba el saldo dos veces: entre el principio y el final de una descarga puede cambiar
+todo. El cupo de frames se comprueba una sola vez, en cuanto se conoce el recuento, que es
+el primer momento en que se puede saber.
 
 Orden completo del flujo, integrando los tres specs:
 
 1. Permiso `framcit.imagen` (spec 001).
-2. **Cupo disponible** (este spec). Sin cupo, se corta aqui: no se comprueba saldo, no se
+2. **Slot disponible** (este spec). Sin slot, se corta aqui: no se comprueba saldo, no se
    descarga nada, no se cobra nada. Es la comprobacion mas barata y va primera.
-3. Saldo suficiente (spec 002).
-4. Descarga y procesado.
-5. **Cupo disponible otra vez**, justo antes de entregar. Si el jugador lleno su cupo
+3. **Cupo de frames**, si la imagen ya esta en el indice (acierto de cache): el recuento
+   se conoce sin descargar nada.
+4. Saldo suficiente (spec 002).
+5. Descarga.
+6. **Cupo de frames** sobre el recuento declarado del archivo, antes de decodificar ningun
+   frame. Si lo supera, se rechaza sin cobrar y sin guardar nada.
+7. Decodificacion y procesado.
+8. **Slot disponible otra vez**, justo antes de entregar. Si el jugador lleno su cupo
    mientras se descargaba, no se entrega el mapa, **no se cobra**, y se le explica por que.
-6. Cobro (spec 002).
-7. Entrega del item.
+9. Cobro (spec 002).
+10. Entrega del item.
 
 La regla 2.3 (URL que ya posees) se evalua en el paso 2: si ya la posees, el cupo no
 bloquea aunque estes al limite.
@@ -172,10 +244,21 @@ slots:
   por-defecto: 1
   # Hasta que numero se buscan nodos framcit.slots.<n>.
   maximo-nodo: 10
+
+frames:
+  # Frames maximos por imagen para quien no tiene ningun nodo framcit.frames.<n>.
+  # Por defecto igual al limite global del spec 001: sin configurar, nada cambia.
+  por-defecto: 100
+  # Hasta que numero se buscan nodos framcit.frames.<n>.
+  maximo-nodo: 100
 ```
 
-Un valor negativo o invalido en `por-defecto` se trata como 1, con aviso en el log. El
-plugin nunca deja a un jugador sin poder usar el comando por un error de configuracion.
+Un valor negativo o invalido en `slots.por-defecto` se trata como 1, y en
+`frames.por-defecto` como el limite global, ambos con aviso en el log. El plugin nunca deja
+a un jugador sin poder usar el comando por un error de configuracion.
+
+`frames.por-defecto` vale 100 de fabrica a proposito: instalar este spec no cambia el
+comportamiento de nadie hasta que el administrador decida apretar.
 
 ## 8. Relacion con el spec 002 (economia)
 
@@ -195,6 +278,7 @@ Todos en espanol, siguiendo la seccion 9 del spec 001.
 | Situacion | Mensaje |
 |---|---|
 | Cupo lleno al pedir | Ya tienes 3 de 3 imagenes. Borra una con /imagen borrar <id> o mira las tuyas con /imagen mias. |
+| Imagen con demasiados frames | Esa imagen tiene 60 frames y tu limite es 25. No se te cobro nada. |
 | Cupo lleno al entregar | Llenaste tu cupo mientras se descargaba. No se creo la imagen y no se te cobro nada. |
 | Cupo por defecto a cero | No tienes ningun espacio de imagenes asignado. Pideselo a un administrador. |
 | Lista vacia | No tienes ninguna imagen. |
@@ -233,3 +317,15 @@ administracion.
 16. Al arrancar con imagenes creadas antes de este spec, cada una queda asignada a su autor
     y los cupos cuadran sin intervencion manual.
 17. Con el cobro del spec 002 activo y el cupo lleno, el jugador no pierde dinero.
+18. Un jugador con `framcit.frames.25` pide un GIF de 60 frames: se rechaza, no se cobra,
+    y no queda nada guardado en disco.
+19. Ese mismo jugador pide un GIF de 25 frames: funciona.
+20. Un jugador con `framcit.frames.10` y `framcit.frames.50` tiene 50, no 60.
+21. Un jugador con `framcit.frames.500` sigue topado en el limite global del `config.yml`:
+    un GIF de 120 frames se le rechaza igual.
+22. Un jugador pide, por acierto de cache, una imagen de 80 frames con un cupo de 25: se le
+    rechaza **sin descargar nada y sin mirarle el saldo**.
+23. A un jugador que ya tiene una imagen de 80 frames se le baja el cupo a 25: su imagen
+    sigue funcionando y no se borra.
+24. Dos jugadores con cupos de frames distintos descargan a la vez: cada uno recibe su
+    propio limite, sin que uno herede el del otro.
