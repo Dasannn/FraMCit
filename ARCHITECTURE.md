@@ -6,7 +6,8 @@ Como se construye lo que describe `docs/spec.md`. Rige sobre este documento:
 - Plugin: **FraMCit**
 - Paquete raiz: `com.dasannn.framcit`
 - Jar: `FraMCit-<version>.jar`
-- Permisos: `framcit.imagen` (todos), `framcit.admin` (solo operadores)
+- Permisos: `framcit.imagen` (solo operadores), `framcit.admin` (solo operadores),
+  `framcit.gratis` (nadie por defecto). Ver constitution 4.2 y spec 002 seccion 7.
 
 ## 1. Stack
 

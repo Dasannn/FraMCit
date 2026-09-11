@@ -97,9 +97,11 @@ Una dependencia que impida arrancar es un fallo de diseno, no una funcionalidad.
 
 ## 6. Piso de seguridad (no negociable)
 
-El owner decidio acceso abierto para los jugadores. Eso NO elimina estas protecciones,
-porque no limitan a un jugador legitimo y sin ellas cualquier jugador puede usar el
-servidor como arma:
+Estas protecciones existen con independencia de quien tenga permiso para usar el comando.
+Cerrarlo por defecto (seccion 4.2) reduce quien puede disparar una descarga, pero no
+cambia nada de lo de abajo: un jugador con permiso legitimo sigue pudiendo pegar una URL
+hostil, y sin estas protecciones el servidor se convierte en un arma. No limitan a nadie
+que use el plugin para lo que es:
 
 1. Solo esquemas `http` y `https`. Nada de `file:`, `ftp:`, `jar:`, ni otros.
 2. Bloqueo de destinos internos: loopback, link-local, y rangos privados
