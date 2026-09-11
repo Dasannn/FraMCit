@@ -9,6 +9,7 @@ import com.dasannn.framcit.net.DnsCacheChecker;
 import com.dasannn.framcit.net.DownloadQueue;
 import com.dasannn.framcit.net.Downloader;
 import com.dasannn.framcit.net.UrlGuard;
+import com.dasannn.framcit.protect.CraftGuard;
 import com.dasannn.framcit.render.AnimationManager;
 import com.dasannn.framcit.render.AnimationScheduler;
 import com.dasannn.framcit.render.FraMCitAnimationListener;
@@ -73,15 +74,19 @@ public final class FraMCitPlugin extends JavaPlugin {
 
         this.gazeTracker = new GazeTracker(animationManager, imageStore);
         this.gazeTracker.setMaxDistance(pluginConfig.getGazeMaxDistance());
-        this.animationScheduler = new AnimationScheduler(animationManager, getLogger());
+        this.gazeTracker.setPauseThresholdMinutes(pluginConfig.getGazePauseMinutes());
+        this.animationScheduler = new AnimationScheduler(animationManager, gazeTracker::isGazePaused, getLogger());
 
         // Iniciar ciclos periódicos (ARCHITECTURE 5, F6.3, F6.6)
         long gazeTicks = Math.max(1L, pluginConfig.getGazePeriodTicks());
         this.gazeTrackerTask = Bukkit.getScheduler().runTaskTimer(this, gazeTracker, gazeTicks, gazeTicks);
         this.animationSchedulerTask = Bukkit.getScheduler().runTaskTimer(this, animationScheduler, 1L, 1L);
 
-        // Registrar listener de eventos para prevención de fugas de memoria (F6.11)
-        Bukkit.getPluginManager().registerEvents(new FraMCitAnimationListener(animationManager), this);
+        // Registrar listener de eventos para prevención de fugas de memoria (F6.11, F12.4)
+        Bukkit.getPluginManager().registerEvents(new FraMCitAnimationListener(animationManager, gazeTracker), this);
+
+        // Registrar listener de protección para mapas inertes (F12.12 - F12.15)
+        Bukkit.getPluginManager().registerEvents(new CraftGuard(), this);
 
         this.imageService = new ImageService(downloader, downloadQueue);
         this.quotaService = new QuotaService(imageStore, () -> pluginConfig);
@@ -122,9 +127,10 @@ public final class FraMCitPlugin extends JavaPlugin {
             imageService.setDownloader(this.downloader);
         }
 
-        // Actualizar distancia de visión de GazeTracker al vuelo
+        // Actualizar distancia de visión y umbral de pausa de GazeTracker al vuelo (F7.1, F12.1)
         if (gazeTracker != null) {
             gazeTracker.setMaxDistance(pluginConfig.getGazeMaxDistance());
+            gazeTracker.setPauseThresholdMinutes(pluginConfig.getGazePauseMinutes());
         }
 
         // Actualizar límite de caché LRU en memoria al vuelo
@@ -151,6 +157,9 @@ public final class FraMCitPlugin extends JavaPlugin {
         }
         if (animationSchedulerTask != null) {
             animationSchedulerTask.cancel();
+        }
+        if (gazeTracker != null) {
+            gazeTracker.close();
         }
         if (animationManager != null) {
             animationManager.close();

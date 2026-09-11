@@ -34,6 +34,7 @@ public class FraMCitConfig {
 
     public static final double DEFAULT_GAZE_MAX_DISTANCE = 24.0;
     public static final int DEFAULT_GAZE_PERIOD_TICKS = 5;
+    public static final int DEFAULT_GAZE_PAUSE_MINUTES = 5;
 
     public static final int DEFAULT_MAX_CACHE_MB = 128;
 
@@ -59,6 +60,7 @@ public class FraMCitConfig {
 
     public static final double MIN_GAZE_MAX_DISTANCE = 1.0;
     public static final int MIN_GAZE_PERIOD_TICKS = 1;
+    public static final int MIN_GAZE_PAUSE_MINUTES = 0;
 
     public static final int MIN_MAX_CACHE_MB = 1;
 
@@ -83,6 +85,7 @@ public class FraMCitConfig {
 
     private final double gazeMaxDistance;
     private final int gazePeriodTicks;
+    private final int gazePauseMinutes;
 
     private final int maxCacheMb;
 
@@ -106,6 +109,7 @@ public class FraMCitConfig {
         int minDelayMs,
         double gazeMaxDistance,
         int gazePeriodTicks,
+        int gazePauseMinutes,
         int maxCacheMb,
         double imagePrice
     ) {
@@ -163,12 +167,48 @@ public class FraMCitConfig {
         this.minDelayMs = minDelayMs;
         this.gazeMaxDistance = gazeMaxDistance;
         this.gazePeriodTicks = gazePeriodTicks;
+        this.gazePauseMinutes = gazePauseMinutes;
         this.maxCacheMb = maxCacheMb;
         this.imagePrice = imagePrice;
         this.defaultSlots = defaultSlots;
         this.maxSlotsNode = maxSlotsNode;
         this.defaultFrames = defaultFrames;
         this.maxFramesNode = maxFramesNode;
+    }
+
+    public FraMCitConfig(
+        int connectTimeoutSeconds,
+        int readTimeoutSeconds,
+        int maxDownloadSizeMb,
+        int maxRedirects,
+        int downloadThreads,
+        int queueCapacity,
+        int maxDimension,
+        int maxFrames,
+        int defaultDelayMs,
+        int minDelayMs,
+        double gazeMaxDistance,
+        int gazePeriodTicks,
+        int maxCacheMb,
+        double imagePrice
+    ) {
+        this(
+            connectTimeoutSeconds,
+            readTimeoutSeconds,
+            maxDownloadSizeMb,
+            maxRedirects,
+            downloadThreads,
+            queueCapacity,
+            maxDimension,
+            maxFrames,
+            defaultDelayMs,
+            minDelayMs,
+            gazeMaxDistance,
+            gazePeriodTicks,
+            DEFAULT_GAZE_PAUSE_MINUTES,
+            maxCacheMb,
+            imagePrice
+        );
     }
 
     /**
@@ -188,6 +228,7 @@ public class FraMCitConfig {
             DEFAULT_MIN_DELAY_MS,
             DEFAULT_GAZE_MAX_DISTANCE,
             DEFAULT_GAZE_PERIOD_TICKS,
+            DEFAULT_GAZE_PAUSE_MINUTES,
             DEFAULT_MAX_CACHE_MB,
             DEFAULT_IMAGE_PRICE,
             DEFAULT_SLOTS_DEFAULT,
@@ -247,6 +288,7 @@ public class FraMCitConfig {
 
         double maxDist = getDouble(config, "animacion.distancia-maxima-vision", DEFAULT_GAZE_MAX_DISTANCE, MIN_GAZE_MAX_DISTANCE, logger);
         int periodTicks = getInt(config, "animacion.periodo-rastreo-ticks", DEFAULT_GAZE_PERIOD_TICKS, MIN_GAZE_PERIOD_TICKS, logger);
+        int gazePauseMinutes = getInt(config, "animacion.pausa-por-mirada", DEFAULT_GAZE_PAUSE_MINUTES, MIN_GAZE_PAUSE_MINUTES, logger);
 
         int maxCacheMb = getInt(config, "cache.tamano-maximo-mb", DEFAULT_MAX_CACHE_MB, MIN_MAX_CACHE_MB, logger);
 
@@ -278,6 +320,7 @@ public class FraMCitConfig {
             minDelay,
             maxDist,
             periodTicks,
+            gazePauseMinutes,
             maxCacheMb,
             imagePrice,
             defaultSlots,
@@ -441,6 +484,14 @@ public class FraMCitConfig {
 
     public int getGazePeriodTicks() {
         return gazePeriodTicks;
+    }
+
+    public int getGazePauseMinutes() {
+        return gazePauseMinutes;
+    }
+
+    public long getGazePauseTicks() {
+        return gazePauseMinutes > 0 ? (long) gazePauseMinutes * 60L * 20L : 0L;
     }
 
     public int getMaxCacheMb() {
