@@ -174,6 +174,8 @@ class FraMCitConfigTest {
               periodo-rastreo-ticks: 10
             cache:
               tamano-maximo-mb: 256
+            economia:
+              precio-por-imagen: 15.0
             """;
 
         FraMCitConfig config = FraMCitConfig.load(new StringReader(yaml), logger);
@@ -193,7 +195,38 @@ class FraMCitConfigTest {
         assertEquals(10, config.getGazePeriodTicks());
         assertEquals(256, config.getMaxCacheMb());
         assertEquals(256L * 1024L * 1024L, config.getMaxCacheBytes());
+        assertEquals(15.0, config.getImagePrice());
 
         assertTrue(handler.records.isEmpty(), "No deben emitirse avisos cuando todo es válido");
+    }
+
+    @Test
+    @DisplayName("F10.6 - Precio negativo o inválido en config se trata como cero y emite aviso")
+    void testNegativeOrInvalidEconomyPriceTreatedAsZero() {
+        Logger logger = Logger.getLogger("TestLogger-EconomyPrice");
+        logger.setUseParentHandlers(false);
+        TestLogHandler handler = new TestLogHandler();
+        logger.addHandler(handler);
+
+        // Caso 1: Precio negativo
+        String yamlNegative = """
+            economia:
+              precio-por-imagen: -10.0
+            """;
+        FraMCitConfig configNeg = FraMCitConfig.load(new StringReader(yamlNegative), logger);
+        assertEquals(0.0, configNeg.getImagePrice(), "Precio negativo debe tratarse como 0.0");
+        assertTrue(handler.records.stream().anyMatch(r -> r.getMessage().contains("economia.precio-por-imagen") && r.getMessage().contains("-10")),
+            "Debe avisar que el precio es negativo e inválido");
+
+        // Caso 2: Precio no numérico
+        handler.records.clear();
+        String yamlInvalid = """
+            economia:
+              precio-por-imagen: "diez euros"
+            """;
+        FraMCitConfig configInv = FraMCitConfig.load(new StringReader(yamlInvalid), logger);
+        assertEquals(0.0, configInv.getImagePrice(), "Precio inválido debe tratarse como 0.0");
+        assertTrue(handler.records.stream().anyMatch(r -> r.getMessage().contains("economia.precio-por-imagen") && r.getMessage().contains("diez euros")),
+            "Debe avisar que el precio no es un número");
     }
 }

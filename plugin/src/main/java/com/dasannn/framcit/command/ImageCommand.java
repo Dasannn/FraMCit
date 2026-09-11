@@ -1,6 +1,10 @@
 package com.dasannn.framcit.command;
 
 import com.dasannn.framcit.FraMCitPlugin;
+import com.dasannn.framcit.economy.ChargeResult;
+import com.dasannn.framcit.economy.EconomyCheckResult;
+import com.dasannn.framcit.economy.EconomyService;
+import com.dasannn.framcit.economy.NoOpEconomyService;
 import com.dasannn.framcit.image.ConvertedFrame;
 import com.dasannn.framcit.render.FraMCitRenderer;
 import com.dasannn.framcit.render.GazeTracker;
@@ -54,6 +58,15 @@ public final class ImageCommand {
     }
 
     public static LiteralCommandNode<CommandSourceStack> createCommandNode(FraMCitPlugin plugin, ImageService imageService, ImageStore imageStore) {
+        return createCommandNode(plugin, imageService, imageStore, null);
+    }
+
+    public static LiteralCommandNode<CommandSourceStack> createCommandNode(
+        FraMCitPlugin plugin,
+        ImageService imageService,
+        ImageStore imageStore,
+        EconomyService fallbackEconomyService
+    ) {
         return Commands.literal("imagen")
             .executes(ctx -> {
                 CommandSender sender = ctx.getSource().getSender();
@@ -136,73 +149,112 @@ public final class ImageCommand {
             .then(Commands.argument("url", StringArgumentType.greedyString())
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
-                    String url = StringArgumentType.getString(ctx, "url").trim();
-
-                    // Interceptar si un usuario sin framcit.admin intentó escribir un subcomando
-                    String urlLower = url.toLowerCase(Locale.ROOT);
-                    if (urlLower.equals("recargar") || urlLower.equals("info")
-                        || urlLower.startsWith("purgar") || urlLower.startsWith("listar")) {
-                        if (!sender.hasPermission("framcit.admin")) {
-                            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
-                            return Command.SINGLE_SUCCESS;
-                        }
-                    }
-
-                    if (!sender.hasPermission("framcit.imagen")) {
-                        sender.sendMessage(Component.text(Messages.NO_PERMISSION));
-                        return Command.SINGLE_SUCCESS;
-                    }
-                    if (!(sender instanceof Player player)) {
-                        sender.sendMessage(Component.text(Messages.ONLY_PLAYER));
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    if (url.isEmpty()) {
-                        sender.sendMessage(Component.text(Messages.USAGE));
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    // F5.4: Normalización de URL para la clave de cache
-                    String normalizedUrl;
-                    try {
-                        normalizedUrl = UrlNormalizer.normalize(url);
-                    } catch (IllegalArgumentException e) {
-                        sender.sendMessage(Component.text(Messages.ERROR_MALFORMED_URL));
-                        return Command.SINGLE_SUCCESS;
-                    }
-
-                    // F5.5: Comprobación de cache por URL normalizada antes de encolar descarga.
-                    if (imageStore != null) {
-                        ImageIndexEntry cached = imageStore.findByNormalizedUrl(normalizedUrl);
-                        if (cached != null && !cached.isOrphan()) {
-                            MapView existingMap = Bukkit.getMap(cached.getMapId());
-                            if (existingMap != null) {
-                                deliverCachedMap(plugin, player, url, cached, existingMap, imageStore);
-                                return Command.SINGLE_SUCCESS;
-                            } else {
-                                plugin.getLogger().warning(String.format("Mapa en cache id=%d ya no existe en el mundo. Marcando como huérfano.", cached.getMapId()));
-                                cached.setOrphan(true);
-                                imageStore.saveIndex();
-                            }
-                        }
-                    }
-
-                    // F4.9: Mensaje inmediato de "Descargando imagen..." solo en caso de cache miss
-                    player.sendMessage(Component.text(Messages.DOWNLOADING));
-
-                    // F4.1: Encadenar descarga, decodificación y conversión en el pool asíncrono
-                    imageService.process(url)
-                        .thenAccept(result -> {
-                            // F4.2: Salto explícito de vuelta al hilo principal
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                handleResult(plugin, player, url, normalizedUrl, result, imageStore);
-                            });
-                        });
-
-                    return Command.SINGLE_SUCCESS;
+                    String url = StringArgumentType.getString(ctx, "url");
+                    return handleImage(sender, url, plugin, imageService, imageStore, fallbackEconomyService);
                 })
             )
             .build();
+    }
+
+    /**
+     * Maneja la ejecución de /imagen <url> (F4.1, F5.5, F10.7, F10.11).
+     */
+    public static int handleImage(
+        CommandSender sender,
+        String rawUrl,
+        FraMCitPlugin plugin,
+        ImageService imageService,
+        ImageStore imageStore,
+        EconomyService fallbackEconomyService
+    ) {
+        String url = rawUrl != null ? rawUrl.trim() : "";
+
+        // Interceptar si un usuario sin framcit.admin intentó escribir un subcomando
+        String urlLower = url.toLowerCase(Locale.ROOT);
+        if (urlLower.equals("recargar") || urlLower.equals("info")
+            || urlLower.startsWith("purgar") || urlLower.startsWith("listar")) {
+            if (!sender.hasPermission("framcit.admin")) {
+                sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+                return Command.SINGLE_SUCCESS;
+            }
+        }
+
+        if (!sender.hasPermission("framcit.imagen")) {
+            sender.sendMessage(Component.text(Messages.NO_PERMISSION));
+            return Command.SINGLE_SUCCESS;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text(Messages.ONLY_PLAYER));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        if (url.isEmpty()) {
+            sender.sendMessage(Component.text(Messages.USAGE));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // F5.4: Normalización de URL para la clave de cache
+        String normalizedUrl;
+        try {
+            normalizedUrl = UrlNormalizer.normalize(url);
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text(Messages.ERROR_MALFORMED_URL));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // Obtener servicio de economía activo o fallback (F10.4)
+        EconomyService eco = (plugin != null && plugin.getEconomyService() != null)
+            ? plugin.getEconomyService()
+            : (fallbackEconomyService != null ? fallbackEconomyService : NoOpEconomyService.INSTANCE);
+
+        // F10.7, F10.11: Comprobar saldo ANTES de descargar o entregar mapa en caché
+        EconomyCheckResult checkResult = eco.checkCanPay(player);
+        if (checkResult instanceof EconomyCheckResult.InsufficientFunds inf) {
+            player.sendMessage(Component.text(Messages.insufficientFunds(inf.formattedPrice(), inf.formattedBalance())));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        // F5.5: Comprobación de cache por URL normalizada antes de encolar descarga.
+        if (imageStore != null) {
+            ImageIndexEntry cached = imageStore.findByNormalizedUrl(normalizedUrl);
+            if (cached != null && !cached.isOrphan()) {
+                MapView existingMap = null;
+                try {
+                    existingMap = Bukkit.getMap(cached.getMapId());
+                } catch (Throwable ignored) {}
+
+                if (existingMap != null) {
+                    deliverCachedMap(plugin, eco, player, url, cached, existingMap, imageStore);
+                    return Command.SINGLE_SUCCESS;
+                } else {
+                    if (plugin != null) {
+                        plugin.getLogger().warning(String.format("Mapa en cache id=%d ya no existe en el mundo. Marcando como huérfano.", cached.getMapId()));
+                    }
+                    cached.setOrphan(true);
+                    imageStore.saveIndex();
+                }
+            }
+        }
+
+        // F4.9: Mensaje inmediato de "Descargando imagen..." solo en caso de cache miss
+        player.sendMessage(Component.text(Messages.DOWNLOADING));
+
+        // F4.1: Encadenar descarga, decodificación y conversión en el pool asíncrono
+        if (imageService != null) {
+            imageService.process(url)
+                .thenAccept(result -> {
+                    // F4.2: Salto explícito de vuelta al hilo principal
+                    if (plugin != null) {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            handleResult(plugin, eco, player, url, normalizedUrl, result, imageStore);
+                        });
+                    } else {
+                        handleResult(null, eco, player, url, normalizedUrl, result, imageStore);
+                    }
+                });
+        }
+
+        return Command.SINGLE_SUCCESS;
     }
 
     /**
@@ -458,6 +510,7 @@ public final class ImageCommand {
      */
     private static void deliverCachedMap(
         FraMCitPlugin plugin,
+        EconomyService eco,
         Player player,
         String rawUrl,
         ImageIndexEntry cached,
@@ -467,6 +520,25 @@ public final class ImageCommand {
         if (!player.isOnline()) {
             return;
         }
+
+        // F10.8, F10.11: Cobrar al entregar el mapa
+        ChargeResult chargeResult = (eco != null) ? eco.charge(player) : new ChargeResult.Success(true, "gratis");
+        if (chargeResult instanceof ChargeResult.InsufficientFunds) {
+            player.sendMessage(Component.text(Messages.ECONOMY_FUNDS_LOST));
+            if (plugin != null) {
+                plugin.getLogger().info(String.format("Entrega de mapa en cache cancelada para %s (%s): saldo perdido entre comprobación y cobro.", player.getName(), rawUrl));
+            }
+            return;
+        }
+        if (chargeResult instanceof ChargeResult.Failure failure) {
+            if (plugin != null) {
+                plugin.getLogger().log(Level.SEVERE, String.format("Fallo en plugin de economía al cobrar mapa en cache a %s (%s): %s", player.getName(), rawUrl, failure.errorMessage()), failure.cause());
+            }
+            player.sendMessage(Component.text(Messages.ECONOMY_PAYMENT_FAILED));
+            return;
+        }
+
+        ChargeResult.Success successCharge = (ChargeResult.Success) chargeResult;
 
         // Asegurar que FraMCitRenderer esté vinculado
         boolean hasRenderer = false;
@@ -501,19 +573,28 @@ public final class ImageCommand {
             player.sendMessage(Component.text(Messages.INVENTORY_FULL));
         }
 
+        // F10.13, F10.15: Mensaje de cobro si no fue gratis
+        if (!successCharge.isFree()) {
+            player.sendMessage(Component.text(Messages.chargeSuccess(successCharge.formattedAmount())));
+        }
+
         if (cached.getFrameCount() > 1) {
             player.sendMessage(Component.text(Messages.animatedSuccess(cached.getFrameCount())));
         } else {
             player.sendMessage(Component.text(Messages.STATIC_SUCCESS));
         }
 
-        plugin.getLogger().info(String.format(
-            "Mapa entregado desde cache: jugador=%s, uuid=%s, url=%s, id=%d",
-            player.getName(),
-            player.getUniqueId(),
-            rawUrl,
-            mapView.getId()
-        ));
+        if (plugin != null) {
+            // F10.14: Log obligatorio incorporando cobro
+            plugin.getLogger().info(String.format(
+                "Mapa entregado desde cache: jugador=%s, uuid=%s, url=%s, id=%d, cobro=%s",
+                player.getName(),
+                player.getUniqueId(),
+                rawUrl,
+                mapView.getId(),
+                successCharge.formattedAmount()
+            ));
+        }
     }
 
     public static void handleResult(FraMCitPlugin plugin, Player player, String rawUrl, ImageProcessResult result) {
@@ -521,12 +602,10 @@ public final class ImageCommand {
         try {
             normalized = UrlNormalizer.normalize(rawUrl);
         } catch (Exception ignored) {}
-        handleResult(plugin, player, rawUrl, normalized, result, plugin != null ? plugin.getImageStore() : null);
+        EconomyService eco = (plugin != null && plugin.getEconomyService() != null) ? plugin.getEconomyService() : NoOpEconomyService.INSTANCE;
+        handleResult(plugin, eco, player, rawUrl, normalized, result, plugin != null ? plugin.getImageStore() : null);
     }
 
-    /**
-     * Procesa el resultado de la imagen en el hilo principal de Bukkit.
-     */
     public static void handleResult(
         FraMCitPlugin plugin,
         Player player,
@@ -535,8 +614,24 @@ public final class ImageCommand {
         ImageProcessResult result,
         ImageStore imageStore
     ) {
+        EconomyService eco = (plugin != null && plugin.getEconomyService() != null) ? plugin.getEconomyService() : NoOpEconomyService.INSTANCE;
+        handleResult(plugin, eco, player, rawUrl, normalizedUrl, result, imageStore);
+    }
+
+    /**
+     * Procesa el resultado de la imagen en el hilo principal de Bukkit (F10.8, F10.9, F10.10, F10.14).
+     */
+    public static void handleResult(
+        FraMCitPlugin plugin,
+        EconomyService eco,
+        Player player,
+        String rawUrl,
+        String normalizedUrl,
+        ImageProcessResult result,
+        ImageStore imageStore
+    ) {
         if (result instanceof ImageProcessResult.Failure failure) {
-            if (failure.cause() != null) {
+            if (failure.cause() != null && plugin != null) {
                 plugin.getLogger().warning("Fallo al procesar imagen para " + player.getName() + " (" + rawUrl + "): " + failure.cause().getMessage());
             }
             if (player.isOnline()) {
@@ -548,11 +643,34 @@ public final class ImageCommand {
 
         ImageProcessResult.Success success = (ImageProcessResult.Success) result;
 
-        // F4.7: Si el jugador se desconectó durante la descarga, cancelar sin entregar nada
+        // F4.7: Si el jugador se desconectó durante la descarga, cancelar sin entregar nada (ni cobrar)
         if (!player.isOnline()) {
-            plugin.getLogger().info("Descarga completada para " + player.getName() + " (" + rawUrl + "), pero el jugador se desconecto. Entrega cancelada.");
+            if (plugin != null) {
+                plugin.getLogger().info("Descarga completada para " + player.getName() + " (" + rawUrl + "), pero el jugador se desconecto. Entrega cancelada.");
+            }
             return;
         }
+
+        // F10.8: Cobrar AL ENTREGAR el mapa, nunca antes
+        ChargeResult chargeResult = (eco != null) ? eco.charge(player) : new ChargeResult.Success(true, "gratis");
+        if (chargeResult instanceof ChargeResult.InsufficientFunds) {
+            // F10.9: Saldo perdido entre la comprobación y el cobro: no se entrega el mapa y se descarta lo creado
+            player.sendMessage(Component.text(Messages.ECONOMY_FUNDS_LOST));
+            if (plugin != null) {
+                plugin.getLogger().info(String.format("Entrega cancelada para %s (%s): saldo perdido entre comprobación y cobro.", player.getName(), rawUrl));
+            }
+            return;
+        }
+        if (chargeResult instanceof ChargeResult.Failure failure) {
+            // F10.10: Fallo del plugin de economía al cobrar: no se entrega el mapa, traza completa al log y mensaje genérico al jugador
+            if (plugin != null) {
+                plugin.getLogger().log(Level.SEVERE, String.format("Fallo en plugin de economía al cobrar a %s (%s): %s", player.getName(), rawUrl, failure.errorMessage()), failure.cause());
+            }
+            player.sendMessage(Component.text(Messages.ECONOMY_PAYMENT_FAILED));
+            return;
+        }
+
+        ChargeResult.Success successCharge = (ChargeResult.Success) chargeResult;
 
         try {
             // F4.3: Crear MapView en el hilo principal
@@ -578,6 +696,11 @@ public final class ImageCommand {
                 player.sendMessage(Component.text(Messages.INVENTORY_FULL));
             }
 
+            // F10.13, F10.15: Mensaje de cobro si no fue gratis
+            if (!successCharge.isFree()) {
+                player.sendMessage(Component.text(Messages.chargeSuccess(successCharge.formattedAmount())));
+            }
+
             // F4.10: Mensaje final según formato y número de frames
             if (success.image().isAnimated()) {
                 player.sendMessage(Component.text(Messages.animatedSuccess(success.image().getFrameCount())));
@@ -585,16 +708,19 @@ public final class ImageCommand {
                 player.sendMessage(Component.text(Messages.STATIC_SUCCESS));
             }
 
-            // F4.11 [SEC]: Log obligatorio con jugador, UUID, URL completa, tamaño, formato, id de mapa
-            plugin.getLogger().info(String.format(
-                "Mapa creado: jugador=%s, uuid=%s, url=%s, tamano=%d bytes, formato=%s, id=%d",
-                player.getName(),
-                player.getUniqueId(),
-                rawUrl,
-                success.byteCount(),
-                success.image().getFormat().name(),
-                mapId
-            ));
+            // F4.11 [SEC] & F10.14: Log obligatorio incorporando cobro ("gratis" o importe)
+            if (plugin != null) {
+                plugin.getLogger().info(String.format(
+                    "Mapa creado: jugador=%s, uuid=%s, url=%s, tamano=%d bytes, formato=%s, id=%d, cobro=%s",
+                    player.getName(),
+                    player.getUniqueId(),
+                    rawUrl,
+                    success.byteCount(),
+                    success.image().getFormat().name(),
+                    mapId,
+                    successCharge.formattedAmount()
+                ));
+            }
 
             // F5.2, F5.11, F5.14: Guardar imagen en .fmc y actualizar index.json fuera del hilo principal
             if (imageStore != null) {
@@ -620,7 +746,9 @@ public final class ImageCommand {
                 imageStore.saveImageAsync(mapId, success.image(), entry);
             }
         } catch (Throwable t) {
-            plugin.getLogger().log(Level.SEVERE, "Error inesperado al crear o entregar el mapa a " + player.getName(), t);
+            if (plugin != null) {
+                plugin.getLogger().log(Level.SEVERE, "Error inesperado al crear o entregar el mapa a " + player.getName(), t);
+            }
             if (player.isOnline()) {
                 player.sendMessage(Component.text(Messages.ERROR_CORRUPTED_FILE));
             }

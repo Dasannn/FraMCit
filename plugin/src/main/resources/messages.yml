@@ -50,3 +50,9 @@ admin:
   listar-item: "#{id} | {author} | {date} | {url}"
   listar-pie: "Usa /imagen listar {next_page} para ver más."
   listar-pagina-invalida: "Página fuera de rango. Las páginas van de 1 a {total_pages}."
+
+economia:
+  saldo-insuficiente: "No tienes suficiente dinero. Cuesta {precio} y tienes {saldo}."
+  cobro-correcto: "Se te han cobrado {precio} por la imagen."
+  saldo-perdido: "Ya no tienes suficiente dinero: la imagen no se entrego."
+  fallo-pago: "No se pudo procesar el pago. Avisa al staff."

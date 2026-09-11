@@ -64,6 +64,14 @@ class MessagesTest {
         assertEquals("El sitio respondio con error (500). El enlace puede haber caducado.", Messages.httpError(500));
         assertEquals("El sitio respondio con error. El enlace puede haber caducado.", Messages.genericHttpError());
         assertEquals("Imagen animada cargada (12 frames). Se muestra el primer frame como imagen fija.", Messages.animatedSuccess(12));
+
+        // Spec 002 Sección 8
+        assertEquals("No tienes suficiente dinero. Cuesta {precio} y tienes {saldo}.", Messages.ECONOMY_INSUFFICIENT_FUNDS);
+        assertEquals("Se te han cobrado {precio} por la imagen.", Messages.ECONOMY_CHARGE_SUCCESS);
+        assertEquals("Ya no tienes suficiente dinero: la imagen no se entrego.", Messages.ECONOMY_FUNDS_LOST);
+        assertEquals("No se pudo procesar el pago. Avisa al staff.", Messages.ECONOMY_PAYMENT_FAILED);
+        assertEquals("No tienes suficiente dinero. Cuesta 10 $ y tienes 2 $.", Messages.insufficientFunds("10 $", "2 $"));
+        assertEquals("Se te han cobrado 10 $ por la imagen.", Messages.chargeSuccess("10 $"));
     }
 
     @Test
@@ -148,6 +156,11 @@ class MessagesTest {
               listar-item: "{id} por {author}."
               listar-pie: "Siguiente {next_page}."
               listar-pagina-invalida: "Invalida {total_pages}."
+            economia:
+              saldo-insuficiente: "Falta dinero: vale {precio}, posees {saldo}."
+              cobro-correcto: "Cobrado: {precio}."
+              saldo-perdido: "Sin saldo final."
+              fallo-pago: "Error cobro."
             """;
 
         Messages.load(new StringReader(yaml), logger);
@@ -164,6 +177,11 @@ class MessagesTest {
         assertEquals("No miras marco.", Messages.ADMIN_INFO_NO_FRAME);
         assertEquals("Purgado 42.", Messages.ADMIN_PURGE_SUCCESS.replace("{id}", "42"));
         assertEquals("Vacio.", Messages.ADMIN_LIST_EMPTY);
+
+        assertEquals("Falta dinero: vale {precio}, posees {saldo}.", Messages.ECONOMY_INSUFFICIENT_FUNDS);
+        assertEquals("Cobrado: {precio}.", Messages.ECONOMY_CHARGE_SUCCESS);
+        assertEquals("Sin saldo final.", Messages.ECONOMY_FUNDS_LOST);
+        assertEquals("Error cobro.", Messages.ECONOMY_PAYMENT_FAILED);
 
         assertTrue(handler.records.isEmpty(), "No debe haber advertencias si todas las claves están presentes");
     }

@@ -18,11 +18,21 @@ repositories {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
+    maven {
+        name = "jitpack"
+        url = uri("https://jitpack.io")
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.123-stable")
     testImplementation("io.papermc.paper:paper-api:26.2.build.123-stable")
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
+    testImplementation("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.0")
     implementation("com.twelvemonkeys.imageio:imageio-core:3.15.0")
 

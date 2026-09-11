@@ -101,3 +101,13 @@ cache:
   # Mínimo: 1 MB.
   # Por defecto: 128
   tamano-maximo-mb: 128
+
+economia:
+  # Precio por crear una imagen (estática o GIF animado) mediante /imagen.
+  # Si el precio es 0, no hay Vault instalado o no hay plugin de economía registrado,
+  # las imágenes son gratis y no se menciona el dinero en ningún mensaje.
+  # Un valor negativo o inválido se tratará automáticamente como 0 con aviso en consola.
+  # El cobro se puede activar o cambiar al vuelo con '/imagen recargar' sin reiniciar el servidor.
+  # Mínimo: 0.0
+  # Por defecto: 0.0
+  precio-por-imagen: 0.0

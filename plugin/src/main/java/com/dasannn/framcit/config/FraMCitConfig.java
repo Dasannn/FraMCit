@@ -37,6 +37,8 @@ public class FraMCitConfig {
 
     public static final int DEFAULT_MAX_CACHE_MB = 128;
 
+    public static final double DEFAULT_IMAGE_PRICE = 0.0;
+
     // Mínimos permitidos para prevenir configuraciones peligrosas
     public static final int MIN_CONNECT_TIMEOUT_SECONDS = 1;
     public static final int MIN_READ_TIMEOUT_SECONDS = 1;
@@ -55,6 +57,8 @@ public class FraMCitConfig {
 
     public static final int MIN_MAX_CACHE_MB = 1;
 
+    public static final double MIN_IMAGE_PRICE = 0.0;
+
     private final int connectTimeoutSeconds;
     private final int readTimeoutSeconds;
     private final int maxDownloadSizeMb;
@@ -72,6 +76,8 @@ public class FraMCitConfig {
 
     private final int maxCacheMb;
 
+    private final double imagePrice;
+
     public FraMCitConfig(
         int connectTimeoutSeconds,
         int readTimeoutSeconds,
@@ -85,7 +91,8 @@ public class FraMCitConfig {
         int minDelayMs,
         double gazeMaxDistance,
         int gazePeriodTicks,
-        int maxCacheMb
+        int maxCacheMb,
+        double imagePrice
     ) {
         this.connectTimeoutSeconds = connectTimeoutSeconds;
         this.readTimeoutSeconds = readTimeoutSeconds;
@@ -100,6 +107,7 @@ public class FraMCitConfig {
         this.gazeMaxDistance = gazeMaxDistance;
         this.gazePeriodTicks = gazePeriodTicks;
         this.maxCacheMb = maxCacheMb;
+        this.imagePrice = imagePrice;
     }
 
     /**
@@ -119,7 +127,8 @@ public class FraMCitConfig {
             DEFAULT_MIN_DELAY_MS,
             DEFAULT_GAZE_MAX_DISTANCE,
             DEFAULT_GAZE_PERIOD_TICKS,
-            DEFAULT_MAX_CACHE_MB
+            DEFAULT_MAX_CACHE_MB,
+            DEFAULT_IMAGE_PRICE
         );
     }
 
@@ -176,6 +185,8 @@ public class FraMCitConfig {
 
         int maxCacheMb = getInt(config, "cache.tamano-maximo-mb", DEFAULT_MAX_CACHE_MB, MIN_MAX_CACHE_MB, logger);
 
+        double imagePrice = getDouble(config, "economia.precio-por-imagen", DEFAULT_IMAGE_PRICE, MIN_IMAGE_PRICE, logger);
+
         return new FraMCitConfig(
             connectTimeout,
             readTimeout,
@@ -189,7 +200,8 @@ public class FraMCitConfig {
             minDelay,
             maxDist,
             periodTicks,
-            maxCacheMb
+            maxCacheMb,
+            imagePrice
         );
     }
 
@@ -355,5 +367,9 @@ public class FraMCitConfig {
 
     public long getMaxCacheBytes() {
         return (long) maxCacheMb * 1024L * 1024L;
+    }
+
+    public double getImagePrice() {
+        return imagePrice;
     }
 }
