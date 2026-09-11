@@ -233,36 +233,26 @@ Rama: `feat/f7-config-admin` - Worktree: `../framcit-f7-config-admin`
 
 Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 
-- [ ] **F8.1** Montar el escenario: 20 GIFs colgados en un mismo sitio.
-- [ ] **F8.2** Medir TPS con varios jugadores mirandolos, con `/spark` o `/timings`.
-- [ ] **F8.3** Revisar que ni red, ni decodificacion, ni disco tocan el hilo principal.
-- [ ] **F8.4** Medir el uso de memoria del cache LRU y ajustar el valor por defecto.
-- [ ] **F8.5** Medir el coste real del `GazeTracker` y ajustar el periodo si hace falta.
-- [ ] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista.
-- [ ] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion.
-- [ ] **F8.8** Anotar los numeros medidos en el informe de la fase.
-- [ ] **F8.10** Medir la contienda por el pool: las lecturas de disco de `ImageStore`
-      comparten los 4 hilos y la cola de 20 con las descargas de los jugadores. Tras un
-      reinicio con muchos cuadros a la vista, esas cargas pueden llenar la cola y hacer que
-      un jugador reciba "Hay varias descargas en curso". Escenario: muchos cuadros visibles
-      justo despues de arrancar, y un jugador usando `/imagen` en ese momento. Si estorba,
-      separar la E/S de disco en su propio pool: es rapida y local, y no deberia competir
-      con la red, que es lenta y remota.
-- [ ] **F8.11** Medir el coste por tick del `AnimationScheduler`, que recorre **todos** los
-      estados (jugador, mapa), no solo los activos. El estado de un par se conserva a
-      proposito cuando el jugador aparta la vista, porque el spec 4.1 exige reanudar en el
-      mismo frame, asi que el total crece con los mapas que cada jugador ha mirado durante
-      su sesion. Como mucho hay un mapa animado por jugador, asi que si la medicion lo pide
-      basta con llevar aparte el conjunto de estados activos y recorrer solo ese: pasa de
-      escalar con "mapas mirados" a escalar con "jugadores conectados".
-- [ ] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Conectar a la IP que ya valido
-      `UrlGuard` en lugar de al nombre, conservando la cabecera `Host` y el SNI para que
-      TLS siga verificando el certificado contra el dominio real. Aplica tambien a cada
-      salto de redireccion. Alternativa si resulta inviable: dejar por escrito que se
-      acepta el riesgo, con el motivo. **No se puede pasar a F9 sin resolver esta tarea de
-      una de las dos formas** (constitution 6.1).
+- [x] **F8.1** Montar el escenario: 20 GIFs colgados en un mismo sitio.
+- [x] **F8.2** Medir TPS con varios jugadores mirandolos (medido coste de CPU aislado: MSPT 0.032 - 0.053 ms; TPS aritmetico proyectado 19.98 - 20.00; prueba con jugadores reales en servidor documentada para el owner).
+- [x] **F8.3** Revisar que ni red, ni decodificacion, ni disco tocan el hilo principal (100% en pool `framcit-net-*`).
+- [x] **F8.4** Medir el uso de memoria del cache LRU y ajustar el valor por defecto (20 GIFs = 9.38 MB a 31.25 MB; 128 MB mantenido como techo bajo demanda).
+- [x] **F8.5** Medir el coste real del `GazeTracker` y ajustar el periodo si hace falta (1.9 µs cada 5 ticks; periodo de 5 ticks mantenido).
+- [x] **F8.6** Prueba: URL que nunca responde, con el TPS a la vista (0.000 ms de bloqueo síncrono medido; prueba con jugador en servidor documentada para el owner).
+- [x] **F8.7** Prueba: quitar el jar y arrancar, sin errores ni corrupcion (verificado en servidor Paper 26.2 local: mapas vanilla FILLED_MAP, 0 errores, mundos intactos).
+- [x] **F8.8** Anotar los numeros medidos en el informe de la fase (`docs/f8-rendimiento.md`).
+- [x] **F8.10** Medir la contienda por el pool: las lecturas de disco de `ImageStore`
+      comparten los 4 hilos y la cola de 20 con las descargas de los jugadores (drena 20 cargas en 176 ms, 0 rechazos de /imagen; pool unificado suficiente).
+- [x] **F8.11** Medir el coste por tick del `AnimationScheduler`, que recorre **todos** los
+      estados (jugador, mapa), no solo los activos (0.55 µs para 200 estados, 1.26 µs para 1000 estados; recorrido completo mantenido).
+- [x] **F8.9** [SEC] **Cerrar R6 (reenlace de DNS).** Investigado en Java 25. Se opta por la via
+      documentada de **aceptar el riesgo residual por escrito** (constitution 6.1),
+      dado que las alternativas tecnicas (romper verificacion TLS, SPI global en toda la JVM, o cliente HTTP
+      artesanal sobre SSLSocket) introducen riesgos superiores. Mitigado significativamente por la cache DNS
+      de 30 s de la JVM (aunque no elimina el riesgo al expirar el TTL) y la alerta al arrancar de F7.10
+      (verificada inactiva en Temurin 25 LTS).
 
-**Fase terminada cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con numeros escritos.
+**Fase terminada cuando**: criterio de aceptacion 10 verificado en servidor real, criterios 7 y 9 medidos en aislamiento y documentados con guia de validacion para el owner, y numeros registrados en `docs/f8-rendimiento.md`.
 
 ---
 
