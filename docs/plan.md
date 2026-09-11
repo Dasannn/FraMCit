@@ -19,8 +19,7 @@ Rigen sobre este documento: `docs/constitution.md`, `docs/spec.md`, `ARCHITECTUR
 | Pieza | Estado |
 |---|---|
 | Paper 26.2 local (Java 25) | Instalado por el owner |
-| Servidor Aternos con Paper 26.2 | Instalado por el owner |
-| Bucle de desarrollo | Local. Aternos solo para validacion final de cada hito |
+| Bucle de desarrollo | Local, contra el servidor Paper 26.2 de pruebas (`framcit-testserver`) |
 
 ## 3. Bloqueante conocido antes de F1
 
@@ -32,10 +31,10 @@ Propuesta: borrar `plugin/.git` y quedarse con un solo repositorio, con el codig
 `plugin/`. **Requiere confirmacion del owner antes de tocar nada.** Es una fase de un
 minuto (F1) pero no se ejecuta sin permiso.
 
-**Riesgo A1 - red saliente en Aternos.** No esta verificado que Aternos permita a un plugin
-hacer peticiones HTTP a internet. Si no lo permite, el plugin funciona en local y no en
-Aternos, y ninguna linea de codigo lo arregla. El owner decidio verificarlo mas tarde; la
-comprobacion esta en F9 y **no bloquea** el desarrollo local.
+**Riesgo A1 - red saliente en Aternos: cerrado por obsolescencia (2026-09-10).** Aternos no
+permite subir plugins propios, asi que dejo de ser el destino del plugin. La validacion se
+hace contra un servidor Paper 26.2 local. El trafico saliente quedo comprobado ahi: las
+descargas funcionan. F9 se elimina del plan.
 
 ## 4. Fases
 
@@ -143,15 +142,6 @@ El nucleo del proyecto.
 - **Hecho cuando**: criterios de aceptacion 7, 9 y 10 cumplidos, con los numeros anotados en
   el propio informe de la fase.
 
-### F9 - Validacion en Aternos (riesgo A1)
-
-- Subir el jar al servidor Aternos con Paper 26.2.
-- **Primera prueba, la que importa**: `/imagen <url publica>`. Si Aternos bloquea el trafico
-  saliente, falla aqui y hay que decidir que hacer.
-- Repaso de los 10 criterios de aceptacion en ese servidor.
-- **Hecho cuando**: el plugin funciona en Aternos, o esta documentado exactamente que lo
-  impide.
-
 ## 5. Orden y dependencias
 
 ```
@@ -162,8 +152,6 @@ F1 esqueleto -> F2 seguridad -> F3 imagen -> F4 estatico -> F5 persistencia -> F
                                                                  F7 config/admin <--/
                                                                         |
                                                                  F8 rendimiento
-                                                                        |
-                                                                 F9 Aternos
 ```
 
 F0 es el unico que corre en paralelo. El resto es una cadena: cada fase se apoya en la
@@ -179,7 +167,6 @@ multi-version, y envio de columnas parciales por paquetes crudos.
 
 | Id | Riesgo | Fase | Plan |
 |---|---|---|---|
-| A1 | Aternos puede bloquear el trafico saliente | F9 | Verificarlo pronto si el owner quiere; el desarrollo local no depende de ello |
 | R1 | WEBP animado sin verificar | F0 | Spike antes de disenar el decodificador |
 | A2 | `plugin/` es un repositorio anidado | F1 | Borrar `plugin/.git`, previa confirmacion del owner |
-| A3 | Aternos limita RAM y disco | F9 | Ajustar el cache en memoria y avisar del consumo de `images/` |
+| A3 | El servidor de destino puede limitar RAM y disco | - | Ajustar el cache en memoria y avisar del consumo de `images/` cuando se conozca el destino |

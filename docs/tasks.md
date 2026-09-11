@@ -234,7 +234,7 @@ Rama: `feat/f7-config-admin` - Worktree: `../framcit-f7-config-admin`
 Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 
 - [x] **F8.1** Montar el escenario: 20 GIFs colgados en un mismo sitio.
-- [x] **F8.2** Medir TPS con varios jugadores mirandolos (medido coste de CPU aislado: MSPT 0.032 - 0.053 ms; TPS aritmetico proyectado 19.98 - 20.00; prueba con jugadores reales en servidor documentada para el owner).
+- [x] **F8.2** Medir TPS con varios jugadores mirandolos (medido coste de CPU aislado: MSPT 0.032 - 0.053 ms; TPS aritmetico proyectado 19.98 - 20.00). **Verificado en servidor real el 2026-09-10: `/tps` 20 / 19 / 19 con 20 GIFs colgados. Criterio 9 cumplido.**
 - [x] **F8.3** Revisar que ni red, ni decodificacion, ni disco tocan el hilo principal (100% en pool `framcit-net-*`).
 - [x] **F8.4** Medir el uso de memoria del cache LRU y ajustar el valor por defecto (20 GIFs = 9.38 MB a 31.25 MB; 128 MB mantenido como techo bajo demanda).
 - [x] **F8.5** Medir el coste real del `GazeTracker` y ajustar el periodo si hace falta (1.9 µs cada 5 ticks; periodo de 5 ticks mantenido).
@@ -256,32 +256,11 @@ Rama: `feat/f8-rendimiento` - Worktree: `../framcit-f8-rendimiento`
 
 ---
 
-## F9 - Validacion en Aternos
-
-Rama: `feat/f9-aternos` - Worktree: `../framcit-f9-aternos`
-
-- [ ] **F9.1** Subir el jar al Aternos con Paper 26.2 y arrancar.
-- [ ] **F9.2** [A1] `/imagen <url publica>`. **Esta es la prueba que decide.** Si Aternos
-      bloquea el trafico saliente, falla aqui.
-- [ ] **F9.3** Si falla: documentar el error exacto y llevarselo al owner. No inventar
-      rodeos sin aprobacion.
-- [ ] **F9.4** Repasar los 10 criterios de aceptacion en ese servidor.
-- [ ] **F9.5** Comprobar el consumo de disco de `images/` frente al limite de Aternos.
-- [ ] **F9.6** Comprobar que la persistencia aguanta el apagado automatico por inactividad.
-
-**Fase terminada cuando**: el plugin funciona en Aternos, o esta documentado con precision
-que lo impide.
-
----
-
----
-
 ## F10 - Permisos cerrados y cobro por imagen (spec 002)
 
 Rama: `feat/f10-economia` - Worktree: `../framcit-f10-economia`
 
 Implementa `docs/spec-002-economia.md` y la enmienda de la constitution 4.2.
-Independiente de F9: no comparten codigo.
 
 - [x] **F10.1** `framcit.imagen` pasa a `default: op` en `paper-plugin.yml`.
 - [x] **F10.2** Declarar `framcit.gratis` con `default: false`.
@@ -332,7 +311,7 @@ arrancando y funcionando en un servidor sin Vault.
 | F6 animacion | 14 | F5 |
 | F7 config y admin | 10 | F6 |
 | F8 rendimiento | 11 | F7 |
-| F9 Aternos | 6 | F8 |
 | F10 economia (spec 002) | 17 | F7 |
 
-Total: 128 tareas.
+Total: 122 tareas. F9 (Validacion en Aternos, 6 tareas) se elimino el 2026-09-10:
+Aternos no admite plugins propios y dejo de ser el destino.

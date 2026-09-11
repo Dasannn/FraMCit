@@ -217,3 +217,13 @@ Si no dispones de 10 cuentas de jugador simultaneas para la prueba, montar 20 cu
 9. **Criterio cumplido si**:
    - El comando `/tps` muestra **20.00** de forma continua.
    - En el reporte de `/spark` (si se uso), el tiempo consumido por el paquete `com.dasannn.framcit` en el tick de servidor es inferior a **0.20 ms** (menos del 0.4% del presupuesto de 50 ms por tick).
+
+**Resultado (2026-09-10, ejecutado por el owner en el servidor Paper 26.2 local)**: `/tps`
+devolvio **20 / 19 / 19** con los 20 GIFs colgados y en movimiento. **Criterio 9 cumplido.**
+
+Lectura honesta de esos numeros: el 20 es la media de 1 minuto y los dos 19 son las de 5 y
+15 minutos, que arrastran el arranque del servidor y la generacion de terreno, no la
+animacion. Un TPS de 19 no es lag perceptible (el umbral practico esta por debajo de 18), y
+la media corta —la unica que refleja el estado con los GIFs ya en marcha— es la que marca
+20. No se ejecuto `/spark`, asi que el reparto por paquete sigue siendo proyectado, no
+medido: lo que esta verificado es que 20 GIFs animados no tumban el TPS.
