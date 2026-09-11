@@ -16,6 +16,8 @@ import com.dasannn.framcit.render.FraMCitRenderer;
 import com.dasannn.framcit.render.GazeTracker;
 import com.dasannn.framcit.service.ImageService;
 import com.dasannn.framcit.store.ImageStore;
+import com.dasannn.framcit.economy.EconomyManager;
+import com.dasannn.framcit.economy.EconomyService;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -27,6 +29,7 @@ import java.time.Duration;
 public final class FraMCitPlugin extends JavaPlugin {
 
     private FraMCitConfig pluginConfig;
+    private EconomyService economyService;
     private DownloadQueue downloadQueue;
     private Downloader downloader;
     private ImageService imageService;
@@ -124,6 +127,9 @@ public final class FraMCitPlugin extends JavaPlugin {
         if (imageStore != null && imageStore.getLruCache() != null) {
             imageStore.getLruCache().setMaxBytes(pluginConfig.getMaxCacheBytes());
         }
+
+        // F10.4, F10.5, F10.10: Resolver servicio de economía al vuelo
+        this.economyService = EconomyManager.resolve(this, pluginConfig.getImagePrice(), getLogger());
     }
 
     /**
@@ -186,5 +192,9 @@ public final class FraMCitPlugin extends JavaPlugin {
 
     public AnimationScheduler getAnimationScheduler() {
         return animationScheduler;
+    }
+
+    public EconomyService getEconomyService() {
+        return economyService;
     }
 }

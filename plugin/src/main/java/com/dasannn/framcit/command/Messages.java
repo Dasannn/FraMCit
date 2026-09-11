@@ -59,6 +59,12 @@ public final class Messages {
     public static final String DEFAULT_ADMIN_LIST_FOOTER = "Usa /imagen listar {next_page} para ver más.";
     public static final String DEFAULT_ADMIN_LIST_PAGE_OUT_OF_RANGE = "Página fuera de rango. Las páginas van de 1 a {total_pages}.";
 
+    // Mensajes de economía por defecto (Spec 002 Sección 8, F10.13)
+    public static final String DEFAULT_ECONOMY_INSUFFICIENT_FUNDS = "No tienes suficiente dinero. Cuesta {precio} y tienes {saldo}.";
+    public static final String DEFAULT_ECONOMY_CHARGE_SUCCESS = "Se te han cobrado {precio} por la imagen.";
+    public static final String DEFAULT_ECONOMY_FUNDS_LOST = "Ya no tienes suficiente dinero: la imagen no se entrego.";
+    public static final String DEFAULT_ECONOMY_PAYMENT_FAILED = "No se pudo procesar el pago. Avisa al staff.";
+
     // Campos activos (mutables mediante recarga de messages.yml)
     public static String USAGE = DEFAULT_USAGE;
     public static String DOWNLOADING = DEFAULT_DOWNLOADING;
@@ -98,6 +104,11 @@ public final class Messages {
     public static String ADMIN_LIST_ITEM = DEFAULT_ADMIN_LIST_ITEM;
     public static String ADMIN_LIST_FOOTER = DEFAULT_ADMIN_LIST_FOOTER;
     public static String ADMIN_LIST_PAGE_OUT_OF_RANGE = DEFAULT_ADMIN_LIST_PAGE_OUT_OF_RANGE;
+
+    public static String ECONOMY_INSUFFICIENT_FUNDS = DEFAULT_ECONOMY_INSUFFICIENT_FUNDS;
+    public static String ECONOMY_CHARGE_SUCCESS = DEFAULT_ECONOMY_CHARGE_SUCCESS;
+    public static String ECONOMY_FUNDS_LOST = DEFAULT_ECONOMY_FUNDS_LOST;
+    public static String ECONOMY_PAYMENT_FAILED = DEFAULT_ECONOMY_PAYMENT_FAILED;
 
     /**
      * Restablece todos los mensajes a sus valores originales por defecto.
@@ -141,6 +152,11 @@ public final class Messages {
         ADMIN_LIST_ITEM = DEFAULT_ADMIN_LIST_ITEM;
         ADMIN_LIST_FOOTER = DEFAULT_ADMIN_LIST_FOOTER;
         ADMIN_LIST_PAGE_OUT_OF_RANGE = DEFAULT_ADMIN_LIST_PAGE_OUT_OF_RANGE;
+
+        ECONOMY_INSUFFICIENT_FUNDS = DEFAULT_ECONOMY_INSUFFICIENT_FUNDS;
+        ECONOMY_CHARGE_SUCCESS = DEFAULT_ECONOMY_CHARGE_SUCCESS;
+        ECONOMY_FUNDS_LOST = DEFAULT_ECONOMY_FUNDS_LOST;
+        ECONOMY_PAYMENT_FAILED = DEFAULT_ECONOMY_PAYMENT_FAILED;
     }
 
     /**
@@ -217,6 +233,12 @@ public final class Messages {
         ADMIN_LIST_ITEM = getMessage(config, "admin.listar-item", DEFAULT_ADMIN_LIST_ITEM, logger);
         ADMIN_LIST_FOOTER = getMessage(config, "admin.listar-pie", DEFAULT_ADMIN_LIST_FOOTER, logger);
         ADMIN_LIST_PAGE_OUT_OF_RANGE = getMessage(config, "admin.listar-pagina-invalida", DEFAULT_ADMIN_LIST_PAGE_OUT_OF_RANGE, logger);
+
+        ECONOMY_INSUFFICIENT_FUNDS = getMessage(config, "economia.saldo-insuficiente", DEFAULT_ECONOMY_INSUFFICIENT_FUNDS, logger);
+        String chargeKey = config.contains("economia.cobro-correcto") ? "economia.cobro-correcto" : "economia.cobro-exitoso";
+        ECONOMY_CHARGE_SUCCESS = getMessage(config, chargeKey, DEFAULT_ECONOMY_CHARGE_SUCCESS, logger);
+        ECONOMY_FUNDS_LOST = getMessage(config, "economia.saldo-perdido", DEFAULT_ECONOMY_FUNDS_LOST, logger);
+        ECONOMY_PAYMENT_FAILED = getMessage(config, "economia.fallo-pago", DEFAULT_ECONOMY_PAYMENT_FAILED, logger);
     }
 
     private static String getMessage(ConfigurationSection config, String path, String defaultValue, Logger logger) {
@@ -268,5 +290,15 @@ public final class Messages {
             mb = 1;
         }
         return ERROR_TOO_LARGE.replace("5 MB", mb + " MB");
+    }
+
+    public static String insufficientFunds(String price, String balance) {
+        return ECONOMY_INSUFFICIENT_FUNDS
+            .replace("{precio}", price)
+            .replace("{saldo}", balance);
+    }
+
+    public static String chargeSuccess(String price) {
+        return ECONOMY_CHARGE_SUCCESS.replace("{precio}", price);
     }
 }

@@ -4,10 +4,19 @@ main: com.dasannn.framcit.FraMCitPlugin
 api-version: '26.2'
 description: Imagenes y GIFs en marcos de Minecraft
 
+dependencies:
+  server:
+    Vault:
+      load: BEFORE
+      required: false
+
 permissions:
   framcit.imagen:
     description: Permite usar /imagen para convertir una URL en un mapa
-    default: true
+    default: op
   framcit.admin:
     description: Permisos de administracion de FraMCit
     default: op
+  framcit.gratis:
+    description: Permite crear imagenes sin pagar
+    default: false
