@@ -169,10 +169,26 @@ es del jugador que ejecuta el comando y del staff del servidor. El plugin regist
 quien cargo que URL y cuando, para que el staff pueda actuar. Ese log es un requisito, no
 una funcionalidad opcional.
 
-## 8. Reglas de proceso
+## 8. Proceso de desarrollo (Agent Flow; enmienda 2026-10-23)
 
-- La documentacion se escribe antes que el codigo: constitution, spec, ARCHITECTURE,
-  plan, tasks. En ese orden, con aprobacion en cada etapa.
-- No se implementa nada que no este documentado.
-- No se trabaja en `main` ni se hacen merges a `main` sin instruccion explicita.
-- Cambios de arquitectura o de requisitos requieren aprobacion antes de ejecutarse.
+La planificacion por fases y la secuencia obligatoria de documentos fueron
+utiles para construir la primera version, pero **no son requisitos para cada
+bug, mejora o cambio posterior**. Las reglas operativas vigentes son las de
+`AGENTS.md`.
+
+- Esta constitucion sigue definiendo el producto, sus limites y las
+  protecciones tecnicas y de seguridad. Ninguna preferencia de rapidez
+  permite rebajarlas.
+- Consultar la especificacion relevante y `ARCHITECTURE.md` cuando haga
+  falta entender contratos, comportamiento o dependencias. `docs/plan.md`
+  y `docs/tasks.md` conservan el historial de las fases originales: no
+  imponen nuevas fases o aprobaciones para corregir bugs.
+- Localizar el codigo responsable, sus llamadores y pruebas antes de editar.
+  Resolver directamente los cambios de alcance claro; investigar o delegar
+  cuando haya incertidumbre; pedir revision independiente cuando el riesgo
+  lo justifique.
+- No crear specs, planes o informes por rutina. Actualizar la documentacion
+  pertinente cuando cambien requisitos, contratos o decisiones duraderas.
+- Los cambios de alcance del producto, requisitos de seguridad o decisiones
+  arquitectonicas significativas requieren aprobacion del owner.
+- Trabajar en una rama separada; no fusionar a `main` sin autorizacion.
