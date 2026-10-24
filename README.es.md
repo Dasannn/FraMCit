@@ -26,7 +26,9 @@ Sin NMS. Sin reflexión contra clases internas del servidor. Solo API de Paper.
 
 ## Descarga
 
-**[⬇ Descargar FraMCit-1.0.0.jar](https://github.com/Dasannn/FraMCit/releases/latest/download/FraMCit-1.0.0.jar)**
+**[⬇ Descargar FraMCit-1.1.0.jar](https://github.com/Dasannn/FraMCit/releases/latest/download/FraMCit-1.1.0.jar)**
+
+Última versión estable: **v1.1.0**. El JAR de esta release incluye firma Ed25519 para el actualizador.
 
 Todas las versiones: [github.com/Dasannn/FraMCit/releases](https://github.com/Dasannn/FraMCit/releases)
 
@@ -44,7 +46,7 @@ una casualidad — mira [Funcionar sin Vault](#funcionar-sin-vault).
 ### Instalación
 
 1. Para el servidor.
-2. Copia `FraMCit-1.0.0.jar` a `plugins/`.
+2. Copia `FraMCit-1.1.0.jar` a `plugins/`.
 3. Arranca el servidor.
 4. `/imagen https://ejemplo.com/gato.gif`
 
@@ -498,10 +500,10 @@ cd FraMCit/plugin
 ./gradlew shadowJar
 ```
 
-Sale en `plugin/build/libs/FraMCit-1.0.0.jar`. Necesitas JDK 25; Gradle se descarga la
+Sale en `plugin/build/libs/FraMCit-1.1.0.jar`. Necesitas JDK 25; Gradle se descarga la
 toolchain si no lo tienes en el `PATH`.
 
-Los tests se lanzan con `./gradlew test` — hay 230, concentrados donde un fallo sería
+Los tests se lanzan con `./gradlew test` — hay 255, concentrados donde un fallo sería
 silencioso: el guardia de URLs, el corte por bytes, la conversión de paleta, la resolución
 de cupos, la posesión y el contador de mirada.
 
