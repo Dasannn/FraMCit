@@ -25,8 +25,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.123-stable")
-    testImplementation("io.papermc.paper:paper-api:26.2.build.123-stable")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.218-stable")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.218-stable")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
@@ -35,6 +35,7 @@ dependencies {
     }
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.0")
     implementation("com.twelvemonkeys.imageio:imageio-core:3.15.0")
+    implementation("com.google.code.gson:gson:2.14.0")
 
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -51,6 +52,7 @@ tasks.shadowJar {
     archiveVersion.set(project.version.toString())
 
     relocate("com.twelvemonkeys", "com.dasannn.framcit.libs.com.twelvemonkeys")
+    relocate("com.google.gson", "com.dasannn.framcit.libs.com.google.gson")
     mergeServiceFiles()
 }
 

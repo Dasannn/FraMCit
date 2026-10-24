@@ -18,8 +18,8 @@ Rigen sobre este documento: `docs/constitution.md`, `docs/spec.md`, `ARCHITECTUR
 
 | Pieza | Estado |
 |---|---|
-| Paper 26.2 local (Java 25) | Instalado por el owner |
-| Bucle de desarrollo | Local, contra el servidor Paper 26.2 de pruebas (`framcit-testserver`) |
+| Paper 26.3 (Java 25) | Servidor de pruebas disponible en Crafty |
+| Bucle de desarrollo | Build local; pruebas de integración en la copia Paper 26.3 cuando se autorice |
 
 ## 3. Bloqueante conocido antes de F1
 

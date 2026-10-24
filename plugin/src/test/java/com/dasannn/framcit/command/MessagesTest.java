@@ -1,5 +1,8 @@
 package com.dasannn.framcit.command;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -33,6 +37,16 @@ class MessagesTest {
     @AfterEach
     void tearDown() {
         Messages.resetDefaults();
+    }
+
+    @Test
+    @DisplayName("Las variables dinámicas con ampersand se mantienen como texto literal al aplicar color")
+    void testColoredTemplateDoesNotParseDynamicAmpersandsAsFormatting() {
+        String url = "https://example.test/image.png?size=1&b=blue";
+        Component message = Messages.componentTemplate("&bURL: {url}",
+            Map.of("url", Component.text(url, NamedTextColor.AQUA)));
+
+        assertEquals("URL: " + url, PlainTextComponentSerializer.plainText().serialize(message));
     }
 
     @Test
@@ -160,9 +174,12 @@ class MessagesTest {
               archivo-danado: "Archivo corrupto."
               demasiados-frames: "Demasiados frames."
               dimensiones-excesivas: "Demasiado grande."
+              guardar-en-progreso: "Guardado en curso."
             exito:
               estatico: "Completado estatico."
               animado: "Completado animado ({frames})."
+              error-guardar: "Fallo al guardar; sin cobro."
+              entrega-recuperada: "Entrega restaurada."
             admin:
               recarga-exito: "Recarga lista."
               info-no-marco: "No miras marco."
@@ -192,6 +209,21 @@ class MessagesTest {
               borrada: "Custom borrada {id}."
               no-existe: "Custom no existe {id}."
               no-es-tuya: "Custom no tuya {id}."
+              mias-encabezado: "Mias {pagina}/{total_paginas} {usados}/{limite}."
+              mias-item: "{id} {tipo} {fecha} {url}."
+              mias-pie: "Siguiente {pagina}."
+              mias-pagina-invalida: "Pagina invalida {total_pages}."
+              borrar-detalles: "Detalles {tipo} {frames} {fecha} {compartida} {url}."
+            actualizacion:
+              comprobando: "Check release."
+              descargando: "Preparando release."
+              actualizado: "Current {version}."
+              local-mas-nueva: "Local {current} > latest {latest}."
+              disponible: "Available {version}."
+              preparada: "Staged {version}."
+              error: "Update error {error}."
+            almacenamiento:
+              error: "Storage error."
             """;
 
         Messages.load(new StringReader(yaml), logger);

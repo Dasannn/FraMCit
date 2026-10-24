@@ -17,6 +17,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +61,7 @@ class ImageCommandQuotaTest {
     @AfterEach
     void tearDown() {
         Messages.resetDefaults();
+        if (imageStore != null) imageStore.flushAndClosePersistence(5000L);
         if (downloadQueue != null) {
             downloadQueue.close();
         }
@@ -106,6 +109,18 @@ class ImageCommandQuotaTest {
                     }
                     return null;
                 }
+                return null;
+            }
+        );
+    }
+
+    private static MapView createMockMapView(int id) {
+        return (MapView) Proxy.newProxyInstance(
+            MapView.class.getClassLoader(),
+            new Class<?>[]{ MapView.class },
+            (proxy, method, args) -> {
+                if ("getId".equals(method.getName())) return id;
+                if ("getRenderers".equals(method.getName())) return new ArrayList<MapRenderer>();
                 return null;
             }
         );
@@ -298,7 +313,7 @@ class ImageCommandQuotaTest {
         ImageCommand.handleMias(player, null, imageStore, quota);
 
         assertEquals(3, messages.size());
-        assertTrue(messages.get(0).contains("Usados 2 de 3"));
+        assertTrue(messages.get(0).contains("Cupo: 2/3"));
         assertTrue(messages.get(1).contains("#1") && messages.get(1).contains("estática"));
         assertTrue(messages.get(2).contains("#2") && messages.get(2).contains("animada (10 frames)"));
     }
@@ -328,8 +343,8 @@ class ImageCommandQuotaTest {
 
         // 1. Borrar sin confirmar muestra aviso compartido
         ImageCommand.handleBorrar(pA, 1, false, null, imageStore, quota);
-        assertEquals(1, messagesA.size());
-        assertEquals(Messages.quotaDeleteConfirmShared(1), messagesA.getFirst());
+        assertEquals(2, messagesA.size());
+        assertEquals(Messages.quotaDeleteConfirmShared(1), messagesA.getLast());
         assertTrue(Files.exists(fmc1), "No debe borrarse de disco sin confirmar");
         assertEquals(1, quota.getUsedSlots(playerA));
 
@@ -338,7 +353,7 @@ class ImageCommandQuotaTest {
         // 2. Borrar con confirmar siendo compartido -> libera cupo de A pero conserva archivo y entrada para B
         ImageCommand.handleBorrar(pA, 1, true, null, imageStore, quota);
         assertEquals(1, messagesA.size());
-        assertEquals(Messages.quotaDeleted(1, 0, 3), messagesA.getFirst());
+        assertEquals("✓ " + Messages.quotaDeleted(1, 0, 3), messagesA.getFirst());
         assertTrue(Files.exists(fmc1), "El archivo en disco debe conservarse porque B sigue siendo poseedor");
         assertEquals(0, quota.getUsedSlots(playerA));
         assertEquals(1, quota.getUsedSlots(playerB));
@@ -350,15 +365,96 @@ class ImageCommandQuotaTest {
 
         // Sin confirmar muestra aviso de último poseedor
         ImageCommand.handleBorrar(pB, 1, false, null, imageStore, quota);
-        assertEquals(Messages.quotaDeleteConfirm(1), messagesB.getFirst());
+        assertEquals(Messages.quotaDeleteConfirm(1), messagesB.getLast());
 
         messagesB.clear();
 
         // Con confirmar -> último poseedor: borra archivo de disco y remueve de index.json
         ImageCommand.handleBorrar(pB, 1, true, null, imageStore, quota);
-        assertEquals(Messages.quotaDeleted(1, 0, 3), messagesB.getFirst());
+        assertEquals("✓ " + Messages.quotaDeleted(1, 0, 3), messagesB.getFirst());
         assertFalse(Files.exists(fmc1), "El archivo .fmc debe eliminarse del disco al borrarlo el último poseedor");
         assertNull(imageStore.findByMapId(1), "La entrada debe removerse de index.json");
+    }
+
+    @Test
+    @DisplayName("/imagen mias pagina las imágenes propias con ITEMS_PER_PAGE")
+    void testMiasPagination() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "Pages", Set.of("framcit.imagen", "framcit.slots.10"), messages);
+        QuotaService quota = new QuotaService(imageStore, FraMCitConfig.defaults());
+        for (int id = 1; id <= ImageCommand.ITEMS_PER_PAGE + 1; id++) {
+            imageStore.getIndexManager().addEntry(new ImageIndexEntry(id, "https://example.com/" + id + ".png",
+                "https://example.com/" + id + ".png", "Pages", owner.toString(), "2026-10-23", "PNG", 1,
+                List.of(0), 1, false, new ArrayList<>(List.of(owner.toString()))));
+        }
+        ImageCommand.handleMias(player, null, imageStore, quota, 1);
+        assertEquals(1 + ImageCommand.ITEMS_PER_PAGE + 1, messages.size());
+        assertTrue(messages.getFirst().contains("1/2"));
+        assertTrue(messages.getLast().contains("/imagen mias 2"));
+
+        messages.clear();
+        ImageCommand.handleMias(player, null, imageStore, quota, 2);
+        assertEquals(2, messages.size());
+        assertTrue(messages.get(1).contains("#6"));
+    }
+
+    @Test
+    @DisplayName("/imagen obtener rechaza IDs que el jugador no posee")
+    void testObtenerRejectsNonOwner() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(UUID.randomUUID(), "Visitor", Set.of("framcit.imagen"), messages);
+        imageStore.getIndexManager().addEntry(new ImageIndexEntry(77, "https://example.com/77.png",
+            "https://example.com/77.png", "Owner", owner.toString(), "2026-10-23", "PNG", 1,
+            List.of(0), 1, false, new ArrayList<>(List.of(owner.toString()))));
+        ImageCommand.createCommandNode(null, null, imageStore); // verifica la construcción del árbol con las rutas nuevas
+        // El rechazo por propiedad ocurre antes de consultar Bukkit para el MapView.
+        assertEquals(1, ImageCommand.handleObtener(player, 77, null, imageStore, null, null));
+        assertEquals(Messages.quotaIdNotOwned(77), messages.getFirst());
+    }
+
+    @Test
+    @DisplayName("El permiso se revalida en el callback antes de cobrar o crear el mapa")
+    void testPermissionRevokedBeforeAsyncDelivery() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "Revoked", Set.of(), messages);
+        MockEconomyService economy = new MockEconomyService();
+        ConvertedImage image = new ConvertedImage(ImageFormat.PNG,
+            List.of(new ConvertedFrame(new byte[16384], 0)));
+        ImageProcessResult.Success result = new ImageProcessResult.Success(image,
+            URI.create("https://example.com/revoked.png"), 100);
+        ImageCommand.handleResult(null, economy, null, player, "https://example.com/revoked.png",
+            "https://example.com/revoked.png", result, imageStore);
+        assertEquals(List.of(Messages.NO_PERMISSION), messages);
+        assertEquals(0, economy.chargeCalls.get());
+        assertTrue(imageStore.getIndexManager().getAllEntries().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Un fallo de persistencia no cobra ni entrega una imagen")
+    void testPersistenceFailureDoesNotChargeOrDeliver() throws IOException {
+        Path blockedDataPath = tempDir.resolve("blocked-data");
+        Files.writeString(blockedDataPath, "esto es un archivo, no un directorio");
+        ImageStore failingStore = new ImageStore(blockedDataPath, downloadQueue, logger);
+        List<String> messages = new ArrayList<>();
+        UUID owner = UUID.randomUUID();
+        Player player = createMockPlayer(owner, "NoDisk", Set.of("framcit.imagen"), messages);
+        MockEconomyService economy = new MockEconomyService();
+        ConvertedImage image = new ConvertedImage(ImageFormat.PNG,
+            List.of(new ConvertedFrame(new byte[16384], 0)));
+        ImageProcessResult.Success result = new ImageProcessResult.Success(image,
+            URI.create("https://example.com/no-disk.png"), 100);
+
+        ImageCommand.handleResult(null, economy, null, player, "https://example.com/no-disk.png",
+            "https://example.com/no-disk.png", result, failingStore, world -> createMockMapView(987));
+        failingStore.awaitPersistenceIdle();
+
+        assertEquals(0, economy.chargeCalls.get(), "No se cobra si el archivo no se pudo persistir");
+        assertEquals(List.of(Messages.SAVE_FAILED), messages, "No se confirma ni entrega el mapa");
+        assertNull(failingStore.findByMapId(987), "La entrada fallida debe retirarse del índice en memoria");
+        failingStore.flushAndClosePersistence(5000L);
     }
 
     @Test

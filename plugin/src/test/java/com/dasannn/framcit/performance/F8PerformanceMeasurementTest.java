@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,7 +86,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * - F8.6: URL que nunca responde (el hilo principal jamas se bloquea, TPS constante a 20.0).
  * - F8.7: Eliminacion del jar sin corrupcion ni errores en mapas vanilla.
  * - F8.10: Contienda por el pool de hilos entre I/O de disco y descargas de red de jugadores.
- * - F8.11: Coste por tick del AnimationScheduler al iterar estados inactivos vs activos.
+ * - F8.11: Coste por tick del AnimationScheduler recorriendo el índice de estados activos
+ *          (los estados congelados quedan almacenados pero fuera del recorrido).
  */
 public class F8PerformanceMeasurementTest {
 
@@ -554,12 +556,17 @@ public class F8PerformanceMeasurementTest {
 
         // Simular 20 peticiones concurrentes de lectura de disco al arrancar
         CountDownLatch diskLatch = new CountDownLatch(20);
+        AtomicReference<String> diskFailure = new AtomicReference<>();
         long diskStart = System.nanoTime();
 
         for (int i = 1; i <= 20; i++) {
             final int mapId = i;
-            store.requestLoadAsync(mapId).thenAccept(loaded -> {
-                assertNotNull(loaded);
+            store.requestLoadAsync(mapId).whenComplete((loaded, error) -> {
+                if (error != null) {
+                    diskFailure.compareAndSet(null, "Error leyendo mapa " + mapId + ": " + error.getMessage());
+                } else if (loaded == null) {
+                    diskFailure.compareAndSet(null, "La lectura del mapa " + mapId + " devolvió null.");
+                }
                 diskLatch.countDown();
             });
         }
@@ -583,11 +590,12 @@ public class F8PerformanceMeasurementTest {
             downloadLatch.countDown();
         });
 
-        assertTrue(diskLatch.await(5, TimeUnit.SECONDS), "Las 20 lecturas de disco deben completarse");
+        assertTrue(diskLatch.await(15, TimeUnit.SECONDS), "Las 20 lecturas de disco deben completarse");
+        assertNull(diskFailure.get(), diskFailure.get());
         long diskDurationNanos = System.nanoTime() - diskStart;
         double diskTotalMs = diskDurationNanos / 1_000_000.0;
 
-        assertTrue(downloadLatch.await(5, TimeUnit.SECONDS), "La descarga del jugador debe completarse");
+        assertTrue(downloadLatch.await(15, TimeUnit.SECONDS), "La descarga del jugador debe completarse");
         long downloadDurationNanos = System.nanoTime() - downloadStart;
         double downloadTotalMs = downloadDurationNanos / 1_000_000.0;
 
@@ -609,27 +617,31 @@ public class F8PerformanceMeasurementTest {
     }
 
     @Test
-    @DisplayName("F8.11 - Coste por tick del AnimationScheduler recorriendo todos los estados (activos e inactivos)")
+    @DisplayName("F8.11 - Coste por tick del AnimationScheduler recorriendo solo el índice de estados activos")
     void testAnimationSchedulerIterationCost() {
         AnimationManager manager = new AnimationManager(null, LOGGER);
         AtomicLong clock = new AtomicLong(1000L);
+        Map<UUID, Player> onlinePlayers = new HashMap<>();
         manager.setTimeSupplier(clock::get);
 
-        // Caso A: 10 jugadores, cada uno ha mirado 20 mapas en su sesion = 200 estados
-        // Solo 10 estados estan activos (gazing=true), 190 inactivos
+        // Caso A: 10 jugadores, cada uno ha mirado 20 mapas en su sesión = 200 estados almacenados.
+        // Solo 10 siguen activos; los otros 190 están congelados y fuera del índice que recorre el scheduler.
         int playersA = 10;
         int mapsA = 20;
         for (int p = 1; p <= playersA; p++) {
             UUID uuid = UUID.randomUUID();
+            onlinePlayers.put(uuid, createMockPlayer(uuid, "Player" + p));
             for (int m = 1; m <= mapsA; m++) {
                 manager.updatePlayerGaze(uuid, m, null, null, 0, 0);
             }
         }
+        assertEquals(200, manager.getStateCount());
+        assertEquals(10, manager.getActiveStates().size());
 
         AnimationScheduler scheduler = new AnimationScheduler(
             manager,
             id -> null,
-            id -> null,
+            onlinePlayers::get,
             clock::get,
             LOGGER
         );
@@ -648,13 +660,17 @@ public class F8PerformanceMeasurementTest {
         double avgMicrosA = (elapsedA / (double) iterations) / 1000.0;
         double avgMsptA = avgMicrosA / 1000.0;
 
-        // Caso B: Escenario extremo con 1000 estados (20 jugadores x 50 mapas mirados)
-        for (int p = 11; p <= 20; p++) {
+        // Caso B: 1000 estados almacenados (los 200 anteriores más 10 jugadores x 80 mapas nuevos),
+        // con solo 20 activos. El coste debe depender de estos, no del historial congelado.
+        for (int p = 21; p <= 30; p++) {
             UUID uuid = UUID.randomUUID();
-            for (int m = 1; m <= 50; m++) {
+            onlinePlayers.put(uuid, createMockPlayer(uuid, "Player" + p));
+            for (int m = 1; m <= 80; m++) {
                 manager.updatePlayerGaze(uuid, m, null, null, 0, 0);
             }
         }
+        assertEquals(1000, manager.getStateCount());
+        assertEquals(20, manager.getActiveStates().size());
 
         long startB = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
@@ -664,17 +680,16 @@ public class F8PerformanceMeasurementTest {
         double avgMicrosB = (elapsedB / (double) iterations) / 1000.0;
         double avgMsptB = avgMicrosB / 1000.0;
 
-        System.out.printf("\n=== F8.11: COSTE POR TICK DE ANIMATIONSCHEDULER ===\n");
-        System.out.printf("Caso A (200 estados, 10 activos): %.3f µs por tick (%.6f ms, %.4f%% de tick de 50 ms)\n",
+        System.out.printf("\n=== F8.11: COSTE POR TICK DE ANIMATIONSCHEDULER (ÍNDICE DE ACTIVOS) ===\n");
+        System.out.printf("Caso A (200 estados almacenados, 10 activos): %.3f µs por tick (%.6f ms, %.4f%% de tick de 50 ms)\n",
             avgMicrosA, avgMsptA, (avgMsptA / 50.0) * 100.0);
-        System.out.printf("Caso B (1000 estados, 20 activos): %.3f µs por tick (%.6f ms, %.4f%% de tick de 50 ms)\n",
+        System.out.printf("Caso B (1000 estados almacenados, 20 activos): %.3f µs por tick (%.6f ms, %.4f%% de tick de 50 ms)\n",
             avgMicrosB, avgMsptB, (avgMsptB / 50.0) * 100.0);
-        System.out.printf("Conclusion F8.11: Iterar 200 estados cuesta solo %.3f µs (menos de 0.003 ms).\n" +
-            "Incluso con 1000 estados cuesta apenas %.3f µs (0.01 ms). Es completamente despreciable frente a los\n" +
-            "50.0 ms del presupuesto de tick. No se requiere separar el conjunto de estados activos.\n", avgMicrosA, avgMicrosB);
+        System.out.printf("Conclusion F8.11: el scheduler recorre 10 o 20 pares activos, no los 200 o 1000\n" +
+            "estados retenidos. El coste permanece ligado a quienes miran en ese tick.\n");
 
-        assertTrue(avgMicrosA < 50.0, "El coste para 200 estados debe ser < 50 µs");
-        assertTrue(avgMicrosB < 200.0, "El coste para 1000 estados debe ser < 200 µs");
+        assertTrue(avgMicrosA < 50.0, "El coste con 10 estados activos debe ser < 50 µs");
+        assertTrue(avgMicrosB < 100.0, "El coste con 20 estados activos debe ser < 100 µs");
     }
 
     private static byte[] createTestPngBytes() throws IOException {

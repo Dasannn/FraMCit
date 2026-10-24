@@ -1,10 +1,15 @@
 package com.dasannn.framcit.command;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.Reader;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.logging.Logger;
 
 /**
@@ -16,7 +21,29 @@ import java.util.logging.Logger;
  */
 public final class Messages {
 
+    private static final Pattern MESSAGE_PLACEHOLDER = Pattern.compile("\\{([a-zA-Z0-9_]+)\\}");
+
     private Messages() {}
+
+    /** Convierte códigos de color legacy (&) de messages.yml a componentes Adventure. */
+    public static Component component(String message) {
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(message != null ? message : "");
+    }
+
+    /** Parses legacy colors in trusted message text while keeping replacement components literal. */
+    public static Component componentTemplate(String template, Map<String, Component> replacements) {
+        String value = template != null ? template : "";
+        Matcher matcher = MESSAGE_PLACEHOLDER.matcher(value);
+        Component result = Component.empty();
+        int offset = 0;
+        while (matcher.find()) {
+            result = result.append(component(value.substring(offset, matcher.start())));
+            Component replacement = replacements != null ? replacements.get(matcher.group(1)) : null;
+            result = result.append(replacement != null ? replacement : Component.text(matcher.group()));
+            offset = matcher.end();
+        }
+        return result.append(component(value.substring(offset)));
+    }
 
     // Valores por defecto inmutables
     public static final String DEFAULT_USAGE = "Uso: /imagen <url>";
@@ -39,11 +66,16 @@ public final class Messages {
     public static final String DEFAULT_ERROR_CORRUPTED_FILE = "Ese archivo esta danado y no se pudo leer.";
     public static final String DEFAULT_ERROR_TOO_MANY_FRAMES = "Ese GIF tiene demasiados frames (limite: 100).";
     public static final String DEFAULT_ERROR_DIMENSIONS_TOO_LARGE = "Esa imagen es demasiado grande (limite: 4096x4096).";
+    public static final String DEFAULT_IMAGE_IN_PROGRESS = "Esa imagen ya se está guardando. Espera un momento antes de pedirla otra vez.";
 
     public static final String DEFAULT_STATIC_SUCCESS = "Mapa creado correctamente (imagen estatica).";
     public static final String DEFAULT_HTTP_ERROR_TEMPLATE = "El sitio respondio con error ({code}). El enlace puede haber caducado.";
     public static final String DEFAULT_GENERIC_HTTP_ERROR = "El sitio respondio con error. El enlace puede haber caducado.";
     public static final String DEFAULT_ANIMATED_SUCCESS_TEMPLATE = "Imagen animada cargada ({frames} frames). Se muestra el primer frame como imagen fija.";
+
+    public static final String DEFAULT_SAVE_FAILED = "No se pudo guardar la imagen en disco. No se te ha cobrado nada.";
+    public static final String DEFAULT_PERSISTENCE_FAILED = "No se pudo completar la operación de almacenamiento. Avisa al staff antes de repetirla.";
+    public static final String DEFAULT_DELIVERY_RECOVERED = "Se recuperó una entrega pendiente de FraMCit.";
 
     // Mensajes de administración por defecto
     public static final String DEFAULT_ADMIN_RELOAD_SUCCESS = "Configuración y mensajes recargados. Aplicado al vuelo: límites de descarga, timeouts, redirecciones, dimensiones, frames, retardos, distancia de visión y tamaño de caché. NOTA: hilos de descarga, capacidad de cola y período de rastreo requieren REINICIAR el servidor.";
@@ -76,6 +108,18 @@ public final class Messages {
     public static final String DEFAULT_QUOTA_DELETED = "Imagen borrada. Te queda {usados} de {limite} en uso.";
     public static final String DEFAULT_QUOTA_ID_NOT_FOUND = "No existe ninguna imagen con ese id.";
     public static final String DEFAULT_QUOTA_ID_NOT_OWNED = "Esa imagen no es tuya.";
+    public static final String DEFAULT_QUOTA_MY_LIST_HEADER = "&b✦ Mis imágenes &8— &7Página &f{pagina}&8/&f{total_paginas} &8| &7Cupo: &e{usados}&8/&e{limite}";
+    public static final String DEFAULT_QUOTA_MY_LIST_ITEM = "&e#{id} &8| &f{tipo} &8| &7{fecha} &8| &b{url}";
+    public static final String DEFAULT_QUOTA_MY_LIST_FOOTER = "&6Siguiente página: &f/imagen mias {pagina}";
+    public static final String DEFAULT_QUOTA_MY_LIST_PAGE_INVALID = "&cPágina no válida. Elige una página entre 1 y {total_pages}.";
+    public static final String DEFAULT_QUOTA_DELETE_DETAILS = "&7Detalles &8» &f{tipo} &8| &f{frames} frames &8| &7Fecha: &f{fecha} &8| &7Compartida: &f{compartida}\n&7URL: &b{url}";
+    public static final String DEFAULT_UPDATE_CHECKING = "&bComprobando actualizaciones de FraMCit...";
+    public static final String DEFAULT_UPDATE_DOWNLOADING = "&bComprobando la release y preparando la descarga si hay una actualización...";
+    public static final String DEFAULT_UPDATE_CURRENT = "&a✓ FraMCit ya está actualizado (&f{version}&a).";
+    public static final String DEFAULT_UPDATE_LOCAL_AHEAD = "&eTu versión local (&f{current}&e) es más nueva que la última release estable (&f{latest}&e); no se hará downgrade.";
+    public static final String DEFAULT_UPDATE_AVAILABLE = "&eNueva versión disponible: &f{version}&e. Ejecuta &f/img update&e para prepararla.";
+    public static final String DEFAULT_UPDATE_STAGED = "&a✓ FraMCit {version} está preparado. Reinicia el servidor para aplicarlo.";
+    public static final String DEFAULT_UPDATE_FAILED = "&cNo se pudo completar la actualización: {error}";
 
     // Campos activos (mutables mediante recarga de messages.yml)
     public static String USAGE = DEFAULT_USAGE;
@@ -98,11 +142,16 @@ public final class Messages {
     public static String ERROR_CORRUPTED_FILE = DEFAULT_ERROR_CORRUPTED_FILE;
     public static String ERROR_TOO_MANY_FRAMES = DEFAULT_ERROR_TOO_MANY_FRAMES;
     public static String ERROR_DIMENSIONS_TOO_LARGE = DEFAULT_ERROR_DIMENSIONS_TOO_LARGE;
+    public static String IMAGE_IN_PROGRESS = DEFAULT_IMAGE_IN_PROGRESS;
 
     public static String STATIC_SUCCESS = DEFAULT_STATIC_SUCCESS;
     public static String HTTP_ERROR_TEMPLATE = DEFAULT_HTTP_ERROR_TEMPLATE;
     public static String GENERIC_HTTP_ERROR = DEFAULT_GENERIC_HTTP_ERROR;
     public static String ANIMATED_SUCCESS_TEMPLATE = DEFAULT_ANIMATED_SUCCESS_TEMPLATE;
+
+    public static String SAVE_FAILED = DEFAULT_SAVE_FAILED;
+    public static String PERSISTENCE_FAILED = DEFAULT_PERSISTENCE_FAILED;
+    public static String DELIVERY_RECOVERED = DEFAULT_DELIVERY_RECOVERED;
 
     public static String ADMIN_RELOAD_SUCCESS = DEFAULT_ADMIN_RELOAD_SUCCESS;
     public static String ADMIN_INFO_NO_FRAME = DEFAULT_ADMIN_INFO_NO_FRAME;
@@ -132,6 +181,18 @@ public final class Messages {
     public static String QUOTA_DELETED = DEFAULT_QUOTA_DELETED;
     public static String QUOTA_ID_NOT_FOUND = DEFAULT_QUOTA_ID_NOT_FOUND;
     public static String QUOTA_ID_NOT_OWNED = DEFAULT_QUOTA_ID_NOT_OWNED;
+    public static String QUOTA_MY_LIST_HEADER = DEFAULT_QUOTA_MY_LIST_HEADER;
+    public static String QUOTA_MY_LIST_ITEM = DEFAULT_QUOTA_MY_LIST_ITEM;
+    public static String QUOTA_MY_LIST_FOOTER = DEFAULT_QUOTA_MY_LIST_FOOTER;
+    public static String QUOTA_MY_LIST_PAGE_INVALID = DEFAULT_QUOTA_MY_LIST_PAGE_INVALID;
+    public static String QUOTA_DELETE_DETAILS = DEFAULT_QUOTA_DELETE_DETAILS;
+    public static String UPDATE_CHECKING = DEFAULT_UPDATE_CHECKING;
+    public static String UPDATE_DOWNLOADING = DEFAULT_UPDATE_DOWNLOADING;
+    public static String UPDATE_CURRENT = DEFAULT_UPDATE_CURRENT;
+    public static String UPDATE_LOCAL_AHEAD = DEFAULT_UPDATE_LOCAL_AHEAD;
+    public static String UPDATE_AVAILABLE = DEFAULT_UPDATE_AVAILABLE;
+    public static String UPDATE_STAGED = DEFAULT_UPDATE_STAGED;
+    public static String UPDATE_FAILED = DEFAULT_UPDATE_FAILED;
 
     /**
      * Restablece todos los mensajes a sus valores originales por defecto.
@@ -157,11 +218,16 @@ public final class Messages {
         ERROR_CORRUPTED_FILE = DEFAULT_ERROR_CORRUPTED_FILE;
         ERROR_TOO_MANY_FRAMES = DEFAULT_ERROR_TOO_MANY_FRAMES;
         ERROR_DIMENSIONS_TOO_LARGE = DEFAULT_ERROR_DIMENSIONS_TOO_LARGE;
+        IMAGE_IN_PROGRESS = DEFAULT_IMAGE_IN_PROGRESS;
 
         STATIC_SUCCESS = DEFAULT_STATIC_SUCCESS;
         HTTP_ERROR_TEMPLATE = DEFAULT_HTTP_ERROR_TEMPLATE;
         GENERIC_HTTP_ERROR = DEFAULT_GENERIC_HTTP_ERROR;
         ANIMATED_SUCCESS_TEMPLATE = DEFAULT_ANIMATED_SUCCESS_TEMPLATE;
+
+        SAVE_FAILED = DEFAULT_SAVE_FAILED;
+        PERSISTENCE_FAILED = DEFAULT_PERSISTENCE_FAILED;
+        DELIVERY_RECOVERED = DEFAULT_DELIVERY_RECOVERED;
 
         ADMIN_RELOAD_SUCCESS = DEFAULT_ADMIN_RELOAD_SUCCESS;
         ADMIN_INFO_NO_FRAME = DEFAULT_ADMIN_INFO_NO_FRAME;
@@ -191,6 +257,18 @@ public final class Messages {
         QUOTA_DELETED = DEFAULT_QUOTA_DELETED;
         QUOTA_ID_NOT_FOUND = DEFAULT_QUOTA_ID_NOT_FOUND;
         QUOTA_ID_NOT_OWNED = DEFAULT_QUOTA_ID_NOT_OWNED;
+        QUOTA_MY_LIST_HEADER = DEFAULT_QUOTA_MY_LIST_HEADER;
+        QUOTA_MY_LIST_ITEM = DEFAULT_QUOTA_MY_LIST_ITEM;
+        QUOTA_MY_LIST_FOOTER = DEFAULT_QUOTA_MY_LIST_FOOTER;
+        QUOTA_MY_LIST_PAGE_INVALID = DEFAULT_QUOTA_MY_LIST_PAGE_INVALID;
+        QUOTA_DELETE_DETAILS = DEFAULT_QUOTA_DELETE_DETAILS;
+        UPDATE_CHECKING = DEFAULT_UPDATE_CHECKING;
+        UPDATE_DOWNLOADING = DEFAULT_UPDATE_DOWNLOADING;
+        UPDATE_CURRENT = DEFAULT_UPDATE_CURRENT;
+        UPDATE_LOCAL_AHEAD = DEFAULT_UPDATE_LOCAL_AHEAD;
+        UPDATE_AVAILABLE = DEFAULT_UPDATE_AVAILABLE;
+        UPDATE_STAGED = DEFAULT_UPDATE_STAGED;
+        UPDATE_FAILED = DEFAULT_UPDATE_FAILED;
     }
 
     /**
@@ -249,11 +327,15 @@ public final class Messages {
         ERROR_CORRUPTED_FILE = getMessage(config, "imagen.archivo-danado", DEFAULT_ERROR_CORRUPTED_FILE, logger);
         ERROR_TOO_MANY_FRAMES = getMessage(config, "imagen.demasiados-frames", DEFAULT_ERROR_TOO_MANY_FRAMES, logger);
         ERROR_DIMENSIONS_TOO_LARGE = getMessage(config, "imagen.dimensiones-excesivas", DEFAULT_ERROR_DIMENSIONS_TOO_LARGE, logger);
+        IMAGE_IN_PROGRESS = getMessage(config, "imagen.guardar-en-progreso", DEFAULT_IMAGE_IN_PROGRESS, logger);
 
         STATIC_SUCCESS = getMessage(config, "exito.estatico", DEFAULT_STATIC_SUCCESS, logger);
         HTTP_ERROR_TEMPLATE = getMessage(config, "red.error-http", DEFAULT_HTTP_ERROR_TEMPLATE, logger);
         GENERIC_HTTP_ERROR = getMessage(config, "red.error-http-generico", DEFAULT_GENERIC_HTTP_ERROR, logger);
         ANIMATED_SUCCESS_TEMPLATE = getMessage(config, "exito.animado", DEFAULT_ANIMATED_SUCCESS_TEMPLATE, logger);
+        SAVE_FAILED = getMessage(config, "exito.error-guardar", DEFAULT_SAVE_FAILED, logger);
+        PERSISTENCE_FAILED = getMessage(config, "almacenamiento.error", DEFAULT_PERSISTENCE_FAILED, logger);
+        DELIVERY_RECOVERED = getMessage(config, "exito.entrega-recuperada", DEFAULT_DELIVERY_RECOVERED, logger);
 
         ADMIN_RELOAD_SUCCESS = getMessage(config, "admin.recarga-exito", DEFAULT_ADMIN_RELOAD_SUCCESS, logger);
         ADMIN_INFO_NO_FRAME = getMessage(config, "admin.info-no-marco", DEFAULT_ADMIN_INFO_NO_FRAME, logger);
@@ -284,6 +366,18 @@ public final class Messages {
         QUOTA_DELETED = getMessage(config, "cupos.borrada", DEFAULT_QUOTA_DELETED, logger);
         QUOTA_ID_NOT_FOUND = getMessage(config, "cupos.no-existe", DEFAULT_QUOTA_ID_NOT_FOUND, logger);
         QUOTA_ID_NOT_OWNED = getMessage(config, "cupos.no-es-tuya", DEFAULT_QUOTA_ID_NOT_OWNED, logger);
+        QUOTA_MY_LIST_HEADER = getMessage(config, "cupos.mias-encabezado", DEFAULT_QUOTA_MY_LIST_HEADER, logger);
+        QUOTA_MY_LIST_ITEM = getMessage(config, "cupos.mias-item", DEFAULT_QUOTA_MY_LIST_ITEM, logger);
+        QUOTA_MY_LIST_FOOTER = getMessage(config, "cupos.mias-pie", DEFAULT_QUOTA_MY_LIST_FOOTER, logger);
+        QUOTA_MY_LIST_PAGE_INVALID = getMessage(config, "cupos.mias-pagina-invalida", DEFAULT_QUOTA_MY_LIST_PAGE_INVALID, logger);
+        QUOTA_DELETE_DETAILS = getMessage(config, "cupos.borrar-detalles", DEFAULT_QUOTA_DELETE_DETAILS, logger);
+        UPDATE_CHECKING = getMessage(config, "actualizacion.comprobando", DEFAULT_UPDATE_CHECKING, logger);
+        UPDATE_DOWNLOADING = getMessage(config, "actualizacion.descargando", DEFAULT_UPDATE_DOWNLOADING, logger);
+        UPDATE_CURRENT = getMessage(config, "actualizacion.actualizado", DEFAULT_UPDATE_CURRENT, logger);
+        UPDATE_LOCAL_AHEAD = getMessage(config, "actualizacion.local-mas-nueva", DEFAULT_UPDATE_LOCAL_AHEAD, logger);
+        UPDATE_AVAILABLE = getMessage(config, "actualizacion.disponible", DEFAULT_UPDATE_AVAILABLE, logger);
+        UPDATE_STAGED = getMessage(config, "actualizacion.preparada", DEFAULT_UPDATE_STAGED, logger);
+        UPDATE_FAILED = getMessage(config, "actualizacion.error", DEFAULT_UPDATE_FAILED, logger);
     }
 
     private static String getMessage(ConfigurationSection config, String path, String defaultValue, Logger logger) {

@@ -26,13 +26,13 @@ El archivo compilado se generará en:
 plugin/build/libs/FraMCit-1.0.0.jar
 ```
 
-## Como probar en el servidor Paper 26.2
+## Como probar en el servidor Paper 26.3
 
-1. Copia el archivo generado `FraMCit-1.0.0.jar` a la carpeta `plugins/` de tu servidor local Paper 26.2:
+1. Copia el archivo generado `FraMCit-1.0.0.jar` a la carpeta `plugins/` de tu servidor local Paper 26.3:
    ```
    <ruta-de-tu-servidor-paper>/plugins/FraMCit-1.0.0.jar
    ```
-2. Inicia el servidor Paper 26.2.
+2. Inicia el servidor Paper 26.3.
 3. Verifica en la consola que aparezca el mensaje de activación sin advertencias ni errores:
    ```
    [FraMCit] FraMCit habilitado correctamente.

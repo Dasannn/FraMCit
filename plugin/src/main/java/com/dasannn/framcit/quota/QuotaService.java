@@ -140,7 +140,7 @@ public class QuotaService {
         if (playerUuid == null) return List.of();
         List<ImageIndexEntry> list = new ArrayList<>();
         for (ImageIndexEntry entry : imageStore.getIndexManager().getAllEntries()) {
-            if (entry != null && entry.hasOwner(playerUuid)) {
+            if (entry != null && !imageStore.isPendingMap(entry.getMapId()) && entry.hasOwner(playerUuid)) {
                 list.add(entry);
             }
         }
@@ -156,7 +156,7 @@ public class QuotaService {
         if (entry != null) {
             boolean added = entry.addOwner(playerUuid);
             if (added) {
-                imageStore.saveIndex();
+                imageStore.saveIndexAsync();
             }
             return added;
         }
@@ -173,7 +173,7 @@ public class QuotaService {
         if (entry != null && entry.hasOwner(playerUuid)) {
             boolean removed = entry.removeOwner(playerUuid);
             if (removed) {
-                imageStore.saveIndex();
+                imageStore.saveIndexAsync();
             }
             return removed;
         }

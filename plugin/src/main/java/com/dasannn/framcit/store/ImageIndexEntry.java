@@ -1,8 +1,11 @@
 package com.dasannn.framcit.store;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Representa una entrada en index.json (F5.3, F5.7, F5.14).
@@ -22,10 +25,14 @@ public class ImageIndexEntry {
     private int paletteVersion;
     private boolean orphan;
     private List<String> owners;
+    private List<String> pendingDeliveryOwners;
+    private Map<String, String> pendingDeliveryTokens;
 
     public ImageIndexEntry() {
         this.delays = new ArrayList<>();
         this.owners = null;
+        this.pendingDeliveryOwners = new ArrayList<>();
+        this.pendingDeliveryTokens = new HashMap<>();
     }
 
     public ImageIndexEntry(
@@ -83,13 +90,15 @@ public class ImageIndexEntry {
         this.paletteVersion = paletteVersion;
         this.orphan = orphan;
         this.owners = (owners != null) ? new ArrayList<>(owners) : new ArrayList<>();
+        this.pendingDeliveryOwners = new ArrayList<>();
+        this.pendingDeliveryTokens = new HashMap<>();
     }
 
     public int getMapId() {
         return mapId;
     }
 
-    public void setMapId(int mapId) {
+    public synchronized void setMapId(int mapId) {
         this.mapId = mapId;
     }
 
@@ -97,7 +106,7 @@ public class ImageIndexEntry {
         return originalUrl;
     }
 
-    public void setOriginalUrl(String originalUrl) {
+    public synchronized void setOriginalUrl(String originalUrl) {
         this.originalUrl = originalUrl;
     }
 
@@ -105,7 +114,7 @@ public class ImageIndexEntry {
         return normalizedUrl;
     }
 
-    public void setNormalizedUrl(String normalizedUrl) {
+    public synchronized void setNormalizedUrl(String normalizedUrl) {
         this.normalizedUrl = normalizedUrl;
     }
 
@@ -113,7 +122,7 @@ public class ImageIndexEntry {
         return authorName;
     }
 
-    public void setAuthorName(String authorName) {
+    public synchronized void setAuthorName(String authorName) {
         this.authorName = authorName;
     }
 
@@ -121,7 +130,7 @@ public class ImageIndexEntry {
         return authorUuid;
     }
 
-    public void setAuthorUuid(String authorUuid) {
+    public synchronized void setAuthorUuid(String authorUuid) {
         this.authorUuid = authorUuid;
     }
 
@@ -129,7 +138,7 @@ public class ImageIndexEntry {
         return createdAt;
     }
 
-    public void setCreatedAt(String createdAt) {
+    public synchronized void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 
@@ -137,7 +146,7 @@ public class ImageIndexEntry {
         return format;
     }
 
-    public void setFormat(String format) {
+    public synchronized void setFormat(String format) {
         this.format = format;
     }
 
@@ -145,15 +154,15 @@ public class ImageIndexEntry {
         return frameCount;
     }
 
-    public void setFrameCount(int frameCount) {
+    public synchronized void setFrameCount(int frameCount) {
         this.frameCount = frameCount;
     }
 
-    public List<Integer> getDelays() {
-        return delays;
+    public synchronized List<Integer> getDelays() {
+        return delays != null ? List.copyOf(delays) : List.of();
     }
 
-    public void setDelays(List<Integer> delays) {
+    public synchronized void setDelays(List<Integer> delays) {
         this.delays = delays != null ? new ArrayList<>(delays) : new ArrayList<>();
     }
 
@@ -161,36 +170,36 @@ public class ImageIndexEntry {
         return paletteVersion;
     }
 
-    public void setPaletteVersion(int paletteVersion) {
+    public synchronized void setPaletteVersion(int paletteVersion) {
         this.paletteVersion = paletteVersion;
     }
 
-    public boolean isOrphan() {
+    public synchronized boolean isOrphan() {
         return orphan;
     }
 
-    public void setOrphan(boolean orphan) {
+    public synchronized void setOrphan(boolean orphan) {
         this.orphan = orphan;
     }
 
-    public List<String> getOwners() {
+    public synchronized List<String> getOwners() {
         if (owners == null) {
             owners = new ArrayList<>();
         }
-        return owners;
+        return List.copyOf(owners);
     }
 
-    public List<String> getRawOwners() {
-        return owners;
+    public synchronized List<String> getRawOwners() {
+        return owners != null ? List.copyOf(owners) : null;
     }
 
-    public void setOwners(List<String> owners) {
+    public synchronized void setOwners(List<String> owners) {
         this.owners = (owners != null) ? new ArrayList<>(owners) : new ArrayList<>();
     }
 
-    public boolean hasOwner(String uuid) {
+    public synchronized boolean hasOwner(String uuid) {
         if (uuid == null || uuid.isBlank()) return false;
-        return getOwners().contains(uuid);
+        return owners != null && owners.contains(uuid);
     }
 
     public boolean hasOwner(java.util.UUID uuid) {
@@ -198,10 +207,13 @@ public class ImageIndexEntry {
         return hasOwner(uuid.toString());
     }
 
-    public boolean addOwner(String uuid) {
+    public synchronized boolean addOwner(String uuid) {
         if (uuid == null || uuid.isBlank()) return false;
-        if (!getOwners().contains(uuid)) {
-            return getOwners().add(uuid);
+        if (owners == null) {
+            owners = new ArrayList<>();
+        }
+        if (!owners.contains(uuid)) {
+            return owners.add(uuid);
         }
         return false;
     }
@@ -211,9 +223,9 @@ public class ImageIndexEntry {
         return addOwner(uuid.toString());
     }
 
-    public boolean removeOwner(String uuid) {
+    public synchronized boolean removeOwner(String uuid) {
         if (uuid == null || uuid.isBlank()) return false;
-        return getOwners().remove(uuid);
+        return owners != null && owners.remove(uuid);
     }
 
     public boolean removeOwner(java.util.UUID uuid) {
@@ -221,12 +233,89 @@ public class ImageIndexEntry {
         return removeOwner(uuid.toString());
     }
 
-    public int getOwnerCount() {
-        return getOwners().size();
+    public synchronized int getOwnerCount() {
+        return owners != null ? owners.size() : 0;
     }
 
-    public boolean isOwnedByAnyone() {
-        return !getOwners().isEmpty();
+    public synchronized List<String> getPendingDeliveryOwners() {
+        if (pendingDeliveryOwners == null) {
+            pendingDeliveryOwners = new ArrayList<>();
+        }
+        return List.copyOf(pendingDeliveryOwners);
+    }
+
+    public synchronized boolean hasPendingDeliveries() {
+        return pendingDeliveryOwners != null && !pendingDeliveryOwners.isEmpty();
+    }
+
+    public synchronized boolean hasPendingDelivery(String uuid) {
+        return uuid != null && pendingDeliveryOwners != null && pendingDeliveryOwners.contains(uuid);
+    }
+
+    public synchronized boolean addPendingDelivery(String uuid) {
+        if (uuid == null || uuid.isBlank()) return false;
+        if (pendingDeliveryOwners == null) {
+            pendingDeliveryOwners = new ArrayList<>();
+        }
+        if (pendingDeliveryOwners.contains(uuid)) return false;
+        pendingDeliveryOwners.add(uuid);
+        pendingDeliveryTokens().put(uuid, UUID.randomUUID().toString());
+        return true;
+    }
+
+    public synchronized boolean removePendingDelivery(String uuid) {
+        if (uuid == null || pendingDeliveryOwners == null || !pendingDeliveryOwners.remove(uuid)) return false;
+        pendingDeliveryTokens().remove(uuid);
+        return true;
+    }
+
+    public synchronized String getPendingDeliveryToken(String uuid) {
+        if (uuid == null || pendingDeliveryOwners == null || !pendingDeliveryOwners.contains(uuid)) return null;
+        return pendingDeliveryTokens().computeIfAbsent(uuid, ignored -> UUID.randomUUID().toString());
+    }
+
+    private Map<String, String> pendingDeliveryTokens() {
+        if (pendingDeliveryTokens == null) {
+            pendingDeliveryTokens = new HashMap<>();
+        }
+        return pendingDeliveryTokens;
+    }
+
+    public synchronized boolean isOwnedByAnyone() {
+        return owners != null && !owners.isEmpty();
+    }
+
+    /** Returns a detached value snapshot for asynchronous index serialization. */
+    public synchronized ImageIndexEntry snapshotCopy() {
+        ImageIndexEntry copy = new ImageIndexEntry(
+            mapId,
+            originalUrl,
+            normalizedUrl,
+            authorName,
+            authorUuid,
+            createdAt,
+            format,
+            frameCount,
+            delays != null ? new ArrayList<>(delays) : List.of(),
+            paletteVersion,
+            orphan,
+            owners != null ? new ArrayList<>(owners) : new ArrayList<>()
+        );
+        copy.setPendingDeliveryOwners(pendingDeliveryOwners != null ? new ArrayList<>(pendingDeliveryOwners) : List.of());
+        copy.setPendingDeliveryTokens(pendingDeliveryTokens != null ? new HashMap<>(pendingDeliveryTokens) : Map.of());
+        return copy;
+    }
+
+    public synchronized void setPendingDeliveryOwners(List<String> pendingDeliveryOwners) {
+        this.pendingDeliveryOwners = (pendingDeliveryOwners != null)
+            ? new ArrayList<>(pendingDeliveryOwners)
+            : new ArrayList<>();
+    }
+
+    public synchronized void setPendingDeliveryTokens(Map<String, String> pendingDeliveryTokens) {
+        this.pendingDeliveryTokens = (pendingDeliveryTokens != null)
+            ? new HashMap<>(pendingDeliveryTokens)
+            : new HashMap<>();
     }
 
     @Override

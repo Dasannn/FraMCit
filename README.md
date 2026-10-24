@@ -3,7 +3,7 @@
 **Turn any image or GIF URL into a Minecraft map you can hang on an item frame.**
 Animated GIFs only animate for players who are actually looking at the frame.
 
-[![Paper](https://img.shields.io/badge/Paper-26.2-blue)](https://papermc.io/)
+[![Paper](https://img.shields.io/badge/Paper-26.3-blue)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-25-orange)](https://adoptium.net/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
@@ -34,7 +34,7 @@ All releases: [github.com/Dasannn/FraMCit/releases](https://github.com/Dasannn/F
 
 | | |
 |---|---|
-| Server | **Paper 26.2** (not Spigot, not Bukkit) |
+| Server | **Paper 26.3** (not Spigot, not Bukkit) |
 | Java | **25** (required by Paper 26.1+) |
 | Dependencies | **None.** Vault and LuckPerms are optional |
 
@@ -52,7 +52,7 @@ a coincidence — see [Working without Vault](#working-without-vault).
 > overwriting a live jar makes classes that were not loaded yet disappear mid-session and
 > you get `NoClassDefFoundError`. Stop first, then copy.
 
-By default the command is **operators only**. See [Permissions](#permissions).
+By default the command is **disabled for everyone**, including operators. Grant `framcit.imagen` explicitly; see [Permissions](#permissions).
 
 ---
 
@@ -61,8 +61,11 @@ By default the command is **operators only**. See [Permissions](#permissions).
 | Command | Permission | What it does |
 |---|---|---|
 | `/imagen <url>` | `framcit.imagen` | Download the image and give you the map |
-| `/imagen mias` | `framcit.imagen` | List the images you own and your quota usage |
+| `/imagen mias [page]` | `framcit.imagen` | List your images, five per page, with quota usage |
+| `/imagen obtener <id>` | `framcit.imagen` | Retrieve a map you already own without using another slot |
 | `/imagen borrar <id> confirmar` | `framcit.imagen` | Delete one of your images, freeing a slot |
+| `/img update check` | `framcit.admin` | Check the latest stable GitHub release |
+| `/img update` | `framcit.admin` | Stage the update for the next server restart |
 | `/imagen recargar` | `framcit.admin` | Reload `config.yml` |
 | `/imagen info` | `framcit.admin` | While looking at a frame: who made it, when, from what URL |
 | `/imagen listar [player] [page]` | `framcit.admin` | List stored images, optionally filtered by player |
@@ -71,10 +74,16 @@ By default the command is **operators only**. See [Permissions](#permissions).
 | `/imagen purgar-jugador <player> confirmar` | `framcit.admin` | Delete everything a player owns |
 
 Aliases: `/img`, `/image`. All player-facing messages are in Spanish and live in
-`messages.yml`, so you can translate them without recompiling.
+`messages.yml`, so you can translate them without recompiling. The image list and delete
+preview also support `&` color codes.
 
 Both destructive commands require the literal word `confirmar`. Without it they only show
 you what *would* happen.
+
+`/img update` verifies the official GitHub release asset and its pinned Ed25519 signature,
+then places it in Paper's plugin update folder under the current JAR name. Restart the server
+to apply it; do not use `/reload` or replace a running plugin JAR. See
+[`docs/release-signing.md`](docs/release-signing.md) for release-key setup.
 
 ---
 
@@ -85,8 +94,8 @@ manager's job, never the plugin's.**
 
 | Node | Default | Grants |
 |---|---|---|
-| `framcit.imagen` | `op` | Use `/imagen`, `mias`, `borrar` |
-| `framcit.admin` | `op` | All admin subcommands |
+| `framcit.imagen` | `false` | Use `/imagen`, `mias`, `obtener`, `borrar` |
+| `framcit.admin` | `false` | All admin subcommands |
 | `framcit.gratis` | `false` | Exempt from payment; price is never even mentioned |
 | `framcit.slots.1` | `false` | Own up to 1 image at a time |
 | `framcit.slots.2` | `false` | Up to 2 images |
@@ -96,6 +105,19 @@ manager's job, never the plugin's.**
 | `framcit.frames.25` | `false` | Up to 25 frames |
 | `framcit.frames.50` | `false` | Up to 50 frames |
 | `framcit.frames.100` | `false` | Up to 100 frames |
+
+Operators do not receive `framcit.imagen` or `framcit.admin` automatically. Grant them
+explicitly (for example, with LuckPerms):
+
+```text
+/lp group default permission set framcit.imagen true world=world
+/lp group moderator permission set framcit.admin true world=world
+```
+
+Use the world's actual name in the context (`world`, `world_nether`, `world_the_end`, or a
+Multiverse world name). Repeat the grant for each world where the permission should apply.
+You can also grant a player a permission in one world with
+`/lp user <player> permission set framcit.imagen true world=world`.
 
 ### The two quotas
 
@@ -137,12 +159,13 @@ is only erased from disk when the **last** owner lets go.
 
 ## LuckPerms setup
 
-LuckPerms is optional. Without it, the `default: op` nodes above are all you get, which is
-enough for a small server.
+LuckPerms is optional. `framcit.imagen` and `framcit.admin` default to `false`; operators do
+not receive them automatically. Grant the permissions explicitly as shown above.
 
-LuckPerms ships with `apply-bukkit-default-permissions: true`, so it **respects FraMCit's
-defaults**: your operators keep `framcit.imagen`, `framcit.admin` and
-`framcit.slots.ilimitado` without you configuring anything.
+LuckPerms contexts can scope these grants to a world by its actual world name, for example:
+`/lp group default permission set framcit.imagen true world=survival`.
+These grants restrict command use only; maps already created continue to display and animate
+normally in every world.
 
 ### A worked example
 
@@ -229,9 +252,11 @@ Set a price, run `/imagen recargar`, and charging starts — no restart, no reco
 ### How the charge works
 
 - Balance is checked **before** downloading. No money, no download.
-- The charge lands **at delivery**, never before. If anything fails, you are not charged.
-- **There are no refunds**, because there is nothing to refund: money only moves once the
-  map is in your hand. Deleting an image later does not give it back.
+- The charge is attempted immediately before delivery, after the image has been saved.
+- If the server stops during charging/delivery, the pending map is restored when you next
+  join, without charging you again. To avoid losing purchases, a stop just before the charge
+  completes may result in a free map.
+- **There are no refunds.** Deleting an image later does not return its price.
 - A cache hit costs the full price. The quota measures occupancy; the price measures use.
 - `framcit.gratis` exempts a player, and they never even see the price mentioned.
 

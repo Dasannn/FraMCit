@@ -177,16 +177,23 @@ Orden completo del flujo, integrando los tres specs:
 La regla 2.3 (URL que ya posees) se evalua en el paso 2: si ya la posees, el cupo no
 bloquea aunque estes al limite.
 
-## 5. Borrar una imagen propia
+## 5. Gestionar imagenes propias
 
-### 5.1 `/imagen mias`
+### 5.1 `/imagen mias [pagina]`
 
-Lista las imagenes que posee quien ejecuta el comando: id, URL, fecha, y si es estatica o
-animada. Muestra tambien el cupo: `Usados 2 de 3`.
+Lista las imagenes que posee quien ejecuta el comando, cinco por pagina: id, URL, fecha, y si
+es estatica o animada. Muestra tambien el cupo y la pagina actual. Sugiere las paginas
+disponibles y autocompleta IDs propios para `obtener` y `borrar`.
 
 Permiso: `framcit.imagen`. Un jugador solo ve lo suyo.
 
-### 5.2 `/imagen borrar <id>`
+### 5.2 `/imagen obtener <id>`
+
+Vuelve a entregar el mapa existente si el jugador ya posee esa imagen. No crea una nueva
+imagen ni consume otro slot; se mantiene el cobro habitual de un acierto de cache (spec 002).
+No se pueden recuperar mapas de otros propietarios por ID.
+
+### 5.3 `/imagen borrar <id>`
 
 Libera el slot de esa imagen.
 
@@ -198,6 +205,7 @@ Libera el slot de esa imagen.
   se quedan en blanco. Si queda algun otro poseedor, no se borra nada del disco y para los
   demas no cambia nada.
 - El aviso de confirmacion dice cual de los dos casos aplica.
+- La vista previa incluye el tipo, frames, fecha, URL y si quedan otros poseedores.
 
 ## 6. Comandos de administracion
 

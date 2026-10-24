@@ -1,6 +1,7 @@
 package com.dasannn.framcit;
 
 import com.dasannn.framcit.command.ImageCommand;
+import com.dasannn.framcit.command.PendingDeliveryListener;
 import com.dasannn.framcit.command.Messages;
 import com.dasannn.framcit.config.FraMCitConfig;
 import com.dasannn.framcit.image.ImageDecoder;
@@ -27,6 +28,7 @@ import org.bukkit.scheduler.BukkitTask;
 import com.dasannn.framcit.quota.QuotaService;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 
 public final class FraMCitPlugin extends JavaPlugin {
@@ -91,9 +93,15 @@ public final class FraMCitPlugin extends JavaPlugin {
         this.imageService = new ImageService(downloader, downloadQueue);
         this.quotaService = new QuotaService(imageStore, () -> pluginConfig);
 
+        PendingDeliveryListener pendingDeliveryListener = new PendingDeliveryListener(this, imageStore);
+        Bukkit.getPluginManager().registerEvents(pendingDeliveryListener, this);
+
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             ImageCommand.register(event.registrar(), this, imageService, imageStore);
         });
+
+        // También cubre /reload del plugin, donde puede haber jugadores ya conectados.
+        Bukkit.getScheduler().runTask(this, pendingDeliveryListener::recoverOnlinePlayers);
 
         getLogger().info("FraMCit habilitado correctamente.");
     }
@@ -167,7 +175,7 @@ public final class FraMCitPlugin extends JavaPlugin {
         FraMCitRenderer.setGlobalFrameProvider(null);
 
         if (imageStore != null) {
-            imageStore.saveIndex();
+            imageStore.flushAndClosePersistence(10_000L);
         }
         if (downloadQueue != null) {
             downloadQueue.close();
@@ -213,5 +221,10 @@ public final class FraMCitPlugin extends JavaPlugin {
 
     public QuotaService getQuotaService() {
         return quotaService;
+    }
+
+    /** Ruta del JAR activo, usada para preparar una actualización Paper para el próximo arranque. */
+    public Path getPluginJarPath() {
+        return getFile().toPath();
     }
 }

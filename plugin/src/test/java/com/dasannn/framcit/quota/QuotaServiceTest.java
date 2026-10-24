@@ -40,6 +40,7 @@ class QuotaServiceTest {
 
     @AfterEach
     void tearDown() {
+        if (imageStore != null) imageStore.flushAndClosePersistence(5000L);
         if (downloadQueue != null) {
             downloadQueue.close();
         }

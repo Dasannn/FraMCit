@@ -47,7 +47,7 @@ El orden importa, porque determina que pasa cuando algo falla:
 2. **Al entregar**: se cobra en el momento en que el mapa entra en su inventario o cae a
    sus pies, no antes.
 
-De ahi se siguen dos garantias:
+De ahi se siguen estas garantias:
 
 - **Si algo falla, el jugador no paga.** URL rota, timeout, formato no soportado,
   desconexion a mitad: no hay cobro, porque el cobro ocurre despues.
@@ -55,6 +55,15 @@ De ahi se siguen dos garantias:
   adelantado. Un reembolso es una operacion que tambien puede fallar, y cuando falla el
   jugador pierde dinero y el staff recibe una reclamacion. Este diseno elimina ese caso
   en vez de gestionarlo.
+
+### Reinicio durante la entrega
+
+Antes de intentar el cobro, FraMCit persiste el destinatario como una entrega pendiente. Si el
+servidor se apaga durante el cobro o antes de que el mapa llegue al inventario/suelo, al volver
+a conectarse el jugador recibe el mapa sin un segundo cobro. Esta política prioriza no perder
+una compra; como Vault no ofrece una transacción idempotente que abarque dinero e inventario, un
+apagón justo antes de completar el cobro puede terminar en una entrega gratuita. La marca se
+borra del índice una vez completada la entrega.
 
 Entre la comprobacion y el cobro pasa tiempo (la descarga). El saldo puede haber cambiado
 en ese intervalo: el jugador pudo gastarlo en otra cosa. Si al cobrar ya no alcanza, **no
@@ -84,12 +93,13 @@ Con la enmienda de la constitution 4.2 y este spec:
 
 | Permiso | Por defecto | Que permite |
 |---|---|---|
-| `framcit.imagen` | `op` | Usar `/imagen <url>` |
-| `framcit.admin` | `op` | `recargar`, `info`, `purgar`, `listar` |
+| `framcit.imagen` | `false` | Usar `/imagen <url>`, `mias`, `obtener`, `borrar` |
+| `framcit.admin` | `false` | `recargar`, `info`, `purgar`, `listar` y otros comandos de administración |
 | `framcit.gratis` | `false` | Crear imagenes sin pagar |
 
-`framcit.imagen` pasa de `true` a `op`: el comando viene cerrado y el administrador lo
-abre a quien quiera. Cambio respecto al spec 001 seccion 2.1.
+`framcit.imagen` y `framcit.admin` requieren concesión explícita (`default: false`), también
+para operadores. LuckPerms puede limitar los nodos a mundos concretos mediante su contexto
+`world=<nombre-real-del-mundo>`.
 
 ## 8. Mensajes
 

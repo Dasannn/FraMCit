@@ -3,7 +3,7 @@
 **Convierte cualquier URL de imagen o GIF en un mapa de Minecraft que puedes colgar en un
 marco.** Los GIFs animados solo se animan para quien está mirando el marco.
 
-[![Paper](https://img.shields.io/badge/Paper-26.2-blue)](https://papermc.io/)
+[![Paper](https://img.shields.io/badge/Paper-26.3-blue)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-25-orange)](https://adoptium.net/)
 [![Licencia](https://img.shields.io/badge/Licencia-MIT-green)](LICENSE)
 
@@ -34,7 +34,7 @@ Todas las versiones: [github.com/Dasannn/FraMCit/releases](https://github.com/Da
 
 | | |
 |---|---|
-| Servidor | **Paper 26.2** (no Spigot, no Bukkit) |
+| Servidor | **Paper 26.3** (no Spigot, no Bukkit) |
 | Java | **25** (lo exige Paper 26.1+) |
 | Dependencias | **Ninguna.** Vault y LuckPerms son opcionales |
 
@@ -53,7 +53,8 @@ una casualidad — mira [Funcionar sin Vault](#funcionar-sin-vault).
 > cargado desaparezcan a media sesión y salte `NoClassDefFoundError`. Para primero, copia
 > después.
 
-De fábrica el comando es **solo para operadores**. Mira [Permisos](#permisos).
+De fábrica el comando está **desactivado para todos**, incluidos los operadores. Concede
+`framcit.imagen` explícitamente; mira [Permisos](#permisos).
 
 ---
 
@@ -62,8 +63,11 @@ De fábrica el comando es **solo para operadores**. Mira [Permisos](#permisos).
 | Comando | Permiso | Qué hace |
 |---|---|---|
 | `/imagen <url>` | `framcit.imagen` | Descarga la imagen y te da el mapa |
-| `/imagen mias` | `framcit.imagen` | Lista tus imágenes y tu cupo en uso |
+| `/imagen mias [página]` | `framcit.imagen` | Lista tus imágenes paginadas (5 por página) y el cupo en uso |
+| `/imagen obtener <id>` | `framcit.imagen` | Recupera un mapa que ya posees sin ocupar otro espacio |
 | `/imagen borrar <id> confirmar` | `framcit.imagen` | Borra una imagen tuya y libera el slot |
+| `/img update check` | `framcit.admin` | Comprueba la última versión estable de GitHub |
+| `/img update` | `framcit.admin` | Prepara la actualización para el próximo reinicio |
 | `/imagen recargar` | `framcit.admin` | Recarga `config.yml` |
 | `/imagen info` | `framcit.admin` | Mirando a un marco: quién la creó, cuándo y de qué URL |
 | `/imagen listar [jugador] [pág]` | `framcit.admin` | Lista las imágenes, filtrable por jugador |
@@ -72,10 +76,17 @@ De fábrica el comando es **solo para operadores**. Mira [Permisos](#permisos).
 | `/imagen purgar-jugador <jugador> confirmar` | `framcit.admin` | Borra todo lo de un jugador |
 
 Alias: `/img`, `/image`. Todos los mensajes al jugador están en español y viven en
-`messages.yml`, así que puedes cambiarlos sin recompilar.
+`messages.yml`, así que puedes cambiarlos sin recompilar. La lista de imágenes y la vista
+previa del borrado admiten códigos de color con `&`.
 
 Los dos comandos destructivos exigen la palabra literal `confirmar`. Sin ella solo te
 enseñan lo que *pasaría*.
+
+`/img update` verifica el JAR de la release oficial de GitHub y su firma Ed25519 fijada en el
+plugin; después lo deja en la carpeta de actualizaciones de Paper con el nombre del JAR
+instalado. Reinicia el servidor para aplicarla; no uses `/reload` ni sustituyas un JAR mientras
+Paper está ejecutándose. Consulta [`docs/release-signing.md`](docs/release-signing.md) para
+configurar la clave de release.
 
 ---
 
@@ -86,8 +97,8 @@ gestor de permisos, nunca del plugin.**
 
 | Nodo | Por defecto | Da |
 |---|---|---|
-| `framcit.imagen` | `op` | Usar `/imagen`, `mias`, `borrar` |
-| `framcit.admin` | `op` | Todos los subcomandos de administración |
+| `framcit.imagen` | `false` | Usar `/imagen`, `mias`, `obtener`, `borrar` |
+| `framcit.admin` | `false` | Todos los subcomandos de administración |
 | `framcit.gratis` | `false` | Exento de pago; ni se le menciona el precio |
 | `framcit.slots.1` | `false` | Poseer hasta 1 imagen a la vez |
 | `framcit.slots.2` | `false` | Hasta 2 imágenes |
@@ -97,6 +108,19 @@ gestor de permisos, nunca del plugin.**
 | `framcit.frames.25` | `false` | Hasta 25 frames |
 | `framcit.frames.50` | `false` | Hasta 50 frames |
 | `framcit.frames.100` | `false` | Hasta 100 frames |
+
+Los operadores no reciben `framcit.imagen` ni `framcit.admin` automáticamente. Asígnalos
+explícitamente, por ejemplo con LuckPerms:
+
+```text
+/lp group default permission set framcit.imagen true world=world
+/lp group moderador permission set framcit.admin true world=world
+```
+
+Usa el nombre real del mundo en el contexto (`world`, `world_nether`, `world_the_end` o el
+nombre de un mundo de Multiverse). Repite la asignación para cada mundo donde quieras
+permitir el nodo. También puedes concederlo a una persona para un mundo concreto con
+`/lp user <jugador> permission set framcit.imagen true world=world`.
 
 ### Los dos cupos
 
@@ -138,12 +162,13 @@ archivo solo desaparece del disco cuando la suelta el **último** poseedor.
 
 ## Configurar LuckPerms
 
-LuckPerms es opcional. Sin él tienes los `default: op` de la tabla de arriba, que para un
-servidor pequeño puede bastar.
+LuckPerms es opcional. `framcit.imagen` y `framcit.admin` tienen `default: false`; ser operador
+no los concede automáticamente. Asigna explícitamente los permisos como en los ejemplos.
 
-LuckPerms viene con `apply-bukkit-default-permissions: true`, así que **respeta los valores
-por defecto de FraMCit**: tus operadores conservan `framcit.imagen`, `framcit.admin` y
-`framcit.slots.ilimitado` sin que configures nada.
+LuckPerms permite limitar estos permisos por mundo usando el nombre real del mundo, por
+ejemplo: `/lp group default permission set framcit.imagen true world=survival`.
+Estos permisos restringen los comandos; los mapas ya creados siguen mostrándose y animándose
+normalmente en todos los mundos.
 
 ### Un ejemplo completo
 
@@ -231,9 +256,11 @@ Pon un precio, ejecuta `/imagen recargar` y empieza a cobrar. Sin reiniciar, sin
 ### Cómo funciona el cobro
 
 - El saldo se comprueba **antes** de descargar. Sin dinero, no se descarga nada.
-- El cobro ocurre **al entregar**, nunca antes. Si algo falla, no se te cobra.
-- **No hay reembolsos**, porque no hay nada que reembolsar: el dinero solo se mueve cuando
-  el mapa ya está en tu mano. Borrar la imagen después no te lo devuelve.
+- El cobro se intenta justo antes de entregar el mapa, después de guardar la imagen.
+- Si el servidor se apaga durante el cobro/entrega, el mapa pendiente se recupera al volver
+  a conectarte, sin cobrarlo otra vez. Para evitar perder compras, un apagón justo antes de
+  completar el cobro podría dejar una entrega gratuita.
+- **No hay reembolsos.** Borrar la imagen después no devuelve el precio.
 - Un acierto de caché cuesta el precio completo. El cupo mide ocupación; el precio mide uso.
 - `framcit.gratis` exime a un jugador, y a ese ni se le menciona el precio.
 

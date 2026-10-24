@@ -15,6 +15,8 @@ import com.dasannn.framcit.store.ImageStore;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +55,7 @@ class ImageCommandEconomyTest {
     @AfterEach
     void tearDown() {
         Messages.resetDefaults();
+        if (imageStore != null) imageStore.flushAndClosePersistence(5000L);
         if (downloadQueue != null) {
             downloadQueue.close();
         }
@@ -83,6 +86,18 @@ class ImageCommandEconomyTest {
                     }
                     return null;
                 }
+                return null;
+            }
+        );
+    }
+
+    private static MapView createMockMapView(int id) {
+        return (MapView) Proxy.newProxyInstance(
+            MapView.class.getClassLoader(),
+            new Class<?>[]{ MapView.class },
+            (proxy, method, args) -> {
+                if ("getId".equals(method.getName())) return id;
+                if ("getRenderers".equals(method.getName())) return List.<MapRenderer>of();
                 return null;
             }
         );
@@ -189,7 +204,7 @@ class ImageCommandEconomyTest {
     }
 
     @Test
-    @DisplayName("F10.9 & F10.16 - Saldo perdido entre comprobación y cobro: no se entrega el mapa")
+    @DisplayName("F10.9 & F10.16 - Se revalida el saldo antes de persistir y no se cobra una imagen no entregada")
     void testFundsLostBetweenCheckAndChargeFailsDelivery() {
         List<String> messages = new ArrayList<>();
         Player player = createMockPlayer(UUID.randomUUID(), "JugadorGastoso", false, false, messages);
@@ -214,11 +229,12 @@ class ImageCommandEconomyTest {
             100
         );
 
-        ImageCommand.handleResult(null, ecoService, player, "https://example.com/test.png", "https://example.com/test.png", success, imageStore);
+        ImageCommand.handleResult(null, ecoService, null, player, "https://example.com/test.png",
+            "https://example.com/test.png", success, imageStore, world -> createMockMapView(100));
 
-        // Mensaje al jugador explicando que ya no tenía dinero y no se entregó
+        // El saldo volvió a comprobarse antes de crear/persistir y no se intentó cobrar.
         assertEquals(1, messages.size());
-        assertEquals("Ya no tienes suficiente dinero: la imagen no se entrego.", messages.getFirst());
+        assertEquals(Messages.insufficientFunds("20.00 $", "5.00 $"), messages.getFirst());
         assertEquals(5.0, testEco.getBalance(player), 0.001);
     }
 
@@ -242,7 +258,9 @@ class ImageCommandEconomyTest {
             100
         );
 
-        ImageCommand.handleResult(null, ecoService, player, "https://example.com/test.png", "https://example.com/test.png", success, imageStore);
+        ImageCommand.handleResult(null, ecoService, null, player, "https://example.com/test.png",
+            "https://example.com/test.png", success, imageStore, world -> createMockMapView(101),
+            (map, uri, url, target) -> null);
 
         assertEquals(1, messages.size());
         assertEquals("No se pudo procesar el pago. Avisa al staff.", messages.getFirst());

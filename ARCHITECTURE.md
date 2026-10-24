@@ -6,18 +6,20 @@ Como se construye lo que describe `docs/spec.md`. Rige sobre este documento:
 - Plugin: **FraMCit**
 - Paquete raiz: `com.dasannn.framcit`
 - Jar: `FraMCit-<version>.jar`
-- Permisos: `framcit.imagen` (solo operadores), `framcit.admin` (solo operadores),
+- Permisos: `framcit.imagen` y `framcit.admin` (`default: false`, concesion explicita),
   `framcit.gratis` (nadie por defecto). Ver constitution 4.2 y spec 002 seccion 7.
 
 ## 1. Stack
 
 | Pieza | Eleccion | Verificado |
 |---|---|---|
-| Servidor | Paper 26.2 | API PaperMC, canal STABLE, build 123 (2026-09-09) |
+| Servidor | Paper 26.3 | API PaperMC, canal STABLE, build 218 (2026-10-23) |
 | Java | 25 (toolchain de Gradle fijado a 25) | Docs Paper: 26.1+ requiere Java 25 |
-| API | `io.papermc.paper:paper-api:26.2.build.123-stable` | repo.papermc.io, 2026-09-10 |
+| API | `io.papermc.paper:paper-api:26.3.build.218-stable` | repo.papermc.io, 2026-10-23 |
 | Build | Gradle, Kotlin DSL, plugin Shadow | - |
 | Dependencia | `com.twelvemonkeys.imageio:imageio-webp:3.15.0` (+ `imageio-core`) | Maven Central, 2026-09-10 |
+| Dependencia | Gson 2.14.0, sombreado y reubicado para leer el metadata de releases de GitHub | Maven Central |
+| Actualizaciones | GitHub Releases latest estable; SHA-256 + firma Ed25519 fijada; staging en carpeta update de Paper | GitHub REST API y Paper 26.3 |
 | Descriptor | `paper-plugin.yml` | Docs Paper |
 | Comandos | Command API de Paper (Brigadier), registrada via ciclo de vida | Docs Paper |
 
@@ -103,7 +105,7 @@ sola implementacion.
 - `FraMCitRenderer` - `MapRenderer` contextual: pinta el frame que corresponde a *ese*
   jugador.
 - `GazeTracker` - raytrace periodico, decide quien mira que.
-- `AnimationScheduler` - avanza frames y llama a `sendMap` solo donde hace falta.
+- `AnimationScheduler` - recorre el índice de estados activos, avanza frames y llama a `sendMap` solo donde hace falta.
 
 ### `.quota` (spec 003)
 - `QuotaService` - resuelve los dos cupos de un jugador y responde dos preguntas: si le cabe
@@ -175,12 +177,14 @@ De ahi sale el mecanismo:
    de cuadros colgados en el mundo.
 2. Si lo que impacta es un marco con un mapa de FraMCit y ese mapa es animado, ese par
    (jugador, mapa) pasa a estado "mirando", con su propio indice de frame y su propio reloj.
-3. `AnimationScheduler` corre cada tick. Para cada par en estado "mirando" cuyo retardo ya
-   vencio, avanza el indice y llama a `player.sendMap(view)`. El renderer contextual lee el
-   indice de ese jugador y vuelca al canvas los bytes ya convertidos: es una copia de
-   memoria, sin decodificar ni escalar nada.
-4. Al dejar de mirar, el par se marca inactivo. El indice de frame se conserva, asi que al
-   volver a mirar la animacion sigue donde estaba, como pide el spec 4.1.
+3. `AnimationScheduler` corre cada tick. Recorre solo el índice de estados activos (como
+   máximo un mapa por jugador), no el historial congelado. Para cada par cuyo retardo ya
+   venció, avanza el índice y llama a `player.sendMap(view)`. El renderer contextual lee el
+   índice de ese jugador y vuelca al canvas los bytes ya convertidos: copia de memoria, sin
+   decodificar ni escalar nada.
+4. Al dejar de mirar, el par sale del índice activo, pero su estado se conserva con el índice
+   de frame congelado. Al volver a mirar, la animación sigue donde estaba. Las rutas de
+   limpieza retiran el estado y su entrada del índice activo a la vez.
 5. Las imagenes estaticas no entran nunca en este ciclo. Se pintan una vez y el cliente las
    cachea.
 
@@ -245,7 +249,7 @@ que produce un mapa roto. La fase no se da por terminada sin probar las dos mesa
 plugins/FraMCit/
   config.yml
   messages.yml
-  index.json          <- id de mapa, url, autor, fecha, formato, frames, retardos
+  index.json          <- id de mapa, url, autor, fecha, formato, frames, retardos, entregas pendientes
   images/
     <id>.fmc          <- frames ya convertidos a bytes de paleta de mapa
 ```
@@ -262,8 +266,15 @@ Decisiones:
 - **La posesion vive dentro de `index.json`**, como una lista de UUIDs en cada entrada. No
   se crea un archivo nuevo: ya hay escritura atomica y respaldo `.bak` resueltos ahi, y
   duplicar ese mecanismo para una lista de UUIDs seria trabajo sin beneficio. La migracion
-  del spec 003 es entonces trivial: al cargar, una entrada sin lista de poseedores estrena
-  una con su autor dentro.
+   del spec 003 es entonces trivial: al cargar, una entrada sin lista de poseedores estrena
+   una con su autor dentro.
+- Las entregas sin confirmar guardan en la misma entrada los UUIDs destinatarios. Se escriben
+  antes del cobro y se quitan tras añadir el mapa al inventario/suelo. En un reinicio, el listener
+  de conexión recupera el mapa pendiente sin volver a cobrar; esta política prioriza no perder
+  una compra aunque un apagón justo antes del cobro pueda resultar en una entrega gratuita. Cada
+  intento lleva un token en el item para reconocerlo en el inventario y en entidades de item ya
+  cargadas; como el inventario, las entidades y `index.json` no comparten una transacción, un item
+  movido a un contenedor o dejado en un chunk descargado durante un apagón podría volver a entregarse.
 - Contar los slots de un jugador recorre el indice. Es O(n) sobre unos cientos de entradas,
   en respuesta a un comando que un jugador escribe a mano: no merece un indice inverso.
   Si algun dia el indice crece a decenas de miles, la palanca es un mapa de uuid a ids
@@ -286,13 +297,15 @@ anterior mientras tanto.
 3. Registrar `FraMCitRenderer` en cada `MapView` conocido: obtener la vista por id, quitar
    los renderers que traiga y poner el nuestro. Los ids que ya no existan se registran en el
    log y se marcan como huerfanos en el indice.
-4. Registrar comandos y arrancar los dos ciclos (`GazeTracker`, `AnimationScheduler`).
+4. Registrar el listener de recuperación de entregas pendientes, comandos y los dos ciclos
+   (`GazeTracker`, `AnimationScheduler`).
 
 **Apagado**
 1. Parar los ciclos.
 2. Cerrar el pool de descargas; las descargas en curso se abandonan (nada a medias llega a
    disco: se escribe a un archivo temporal y se renombra al terminar).
-3. Volcar `index.json` si hay cambios pendientes.
+3. Volcar `index.json` si hay cambios pendientes, conservando las entregas pendientes para
+   recuperarlas cuando el destinatario vuelva a conectarse.
 
 **Desinstalacion**: sin renderer, los mapas quedan en blanco. No se toca ningun dato del
 mundo. Cumple la constitution 5.5.

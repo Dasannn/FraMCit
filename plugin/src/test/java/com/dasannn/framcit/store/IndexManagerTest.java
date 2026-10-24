@@ -60,6 +60,9 @@ class IndexManagerTest {
             1,
             false
         );
+        String pendingOwner = "00000000-0000-0000-0000-000000000001";
+        entry1.addPendingDelivery(pendingOwner);
+        String deliveryToken = entry1.getPendingDeliveryToken(pendingOwner);
 
         ImageIndexEntry entry2 = new ImageIndexEntry(
             11,
@@ -101,6 +104,8 @@ class IndexManagerTest {
         assertEquals("Alice", reloaded1.getAuthorName());
         assertEquals(1, reloaded1.getFrameCount());
         assertFalse(reloaded1.isOrphan());
+        assertEquals(List.of("00000000-0000-0000-0000-000000000001"), reloaded1.getPendingDeliveryOwners());
+        assertEquals(deliveryToken, reloaded1.getPendingDeliveryToken(pendingOwner));
 
         ImageIndexEntry reloaded2 = reloaded.getByMapId(11);
         assertNotNull(reloaded2);

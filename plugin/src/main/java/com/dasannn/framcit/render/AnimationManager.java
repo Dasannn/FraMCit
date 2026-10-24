@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +23,10 @@ import java.util.logging.Logger;
  * Mantiene el estado por par (jugador, mapa), coordina el avance de frames,
  * la limpieza de memoria estricta (desconexión, descarga de chunk, rotura de marco),
  * el congelado/reanudado y la desactivación aislada de mapas ante excepciones.
+ *
+ * Además del mapa completo de estados (incluye los congelados, que conservan su frame),
+ * mantiene un índice de estados activos por jugador (como máximo uno por jugador), que
+ * AnimationScheduler recorre cada tick sin pagar el coste del historial de la sesión.
  */
 public class AnimationManager implements FraMCitRenderer.FrameProvider {
 
@@ -45,6 +48,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     private final ImageStore imageStore;
     private final Logger logger;
     private final ConcurrentHashMap<PlayerMapKey, PlayerMapState> states = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PlayerMapState> activeStates = new ConcurrentHashMap<>();
     private final Set<Integer> disabledMaps = ConcurrentHashMap.newKeySet();
     private LongSupplier timeSupplier = System::currentTimeMillis;
 
@@ -86,6 +90,11 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
         return Collections.unmodifiableCollection(states.values());
     }
 
+    /** Snapshot de los pares que están mirando ahora mismo; el scheduler solo recorre este índice. */
+    public Collection<PlayerMapState> getActiveStates() {
+        return List.copyOf(activeStates.values());
+    }
+
     public int getStateCount() {
         return states.size();
     }
@@ -106,11 +115,11 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
             return;
         }
 
-        // 1. Desactivar cualquier otro mapa que este jugador estuviera mirando previamente (congelando su frame)
-        for (Map.Entry<PlayerMapKey, PlayerMapState> entry : states.entrySet()) {
-            if (entry.getKey().playerUuid().equals(playerUuid) && entry.getKey().mapId() != mapId) {
-                entry.getValue().setGazing(false);
-            }
+        // 1. Congelar el mapa activo anterior de este jugador en O(1).
+        PlayerMapState previousActive = activeStates.get(playerUuid);
+        if (previousActive != null && previousActive.getMapId() != mapId) {
+            previousActive.setGazing(false);
+            activeStates.remove(playerUuid, previousActive);
         }
 
         // 2. Obtener o crear estado para este par (jugador, mapa)
@@ -124,6 +133,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
             int delayMs = getEffectiveDelayMs(getFrameDelayMs(mapId, currentFrame));
             state.setNextAdvanceTimeMs(getCurrentTimeMs() + delayMs);
         }
+        activeStates.put(playerUuid, state);
 
         // Actualizar metadatos de ubicación/marco para la limpieza de fugas (F6.11)
         state.setFrameUuid(frameUuid);
@@ -136,10 +146,9 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
      */
     public void clearPlayerGaze(UUID playerUuid) {
         if (playerUuid == null) return;
-        for (Map.Entry<PlayerMapKey, PlayerMapState> entry : states.entrySet()) {
-            if (entry.getKey().playerUuid().equals(playerUuid) && entry.getValue().isGazing()) {
-                entry.getValue().setGazing(false);
-            }
+        PlayerMapState active = activeStates.remove(playerUuid);
+        if (active != null) {
+            active.setGazing(false);
         }
     }
 
@@ -150,6 +159,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     public void onPlayerQuit(UUID playerUuid) {
         if (playerUuid == null) return;
         states.entrySet().removeIf(entry -> entry.getKey().playerUuid().equals(playerUuid));
+        activeStates.remove(playerUuid);
     }
 
     /**
@@ -159,6 +169,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     public void onChunkUnload(String worldName, int chunkX, int chunkZ) {
         if (worldName == null) return;
         states.entrySet().removeIf(entry -> entry.getValue().isInChunk(worldName, chunkX, chunkZ));
+        activeStates.entrySet().removeIf(entry -> entry.getValue().isInChunk(worldName, chunkX, chunkZ));
     }
 
     /**
@@ -168,6 +179,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     public void onFrameBreak(UUID frameUuid) {
         if (frameUuid == null) return;
         states.entrySet().removeIf(entry -> entry.getValue().matchesFrame(frameUuid));
+        activeStates.values().removeIf(state -> state.matchesFrame(frameUuid));
     }
 
     /**
@@ -177,6 +189,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     public void disableMap(int mapId, Throwable cause) {
         disabledMaps.add(mapId);
         states.entrySet().removeIf(entry -> entry.getKey().mapId() == mapId);
+        activeStates.values().removeIf(state -> state.getMapId() == mapId);
         if (logger != null) {
             logger.log(Level.SEVERE, "Mapa animado id=" + mapId + " desactivado por error en su ciclo de animación.", cause);
         }
@@ -242,6 +255,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
     public void removeMap(int mapId) {
         disabledMaps.remove(mapId);
         states.entrySet().removeIf(entry -> entry.getKey().mapId() == mapId);
+        activeStates.values().removeIf(state -> state.getMapId() == mapId);
     }
 
     /**
@@ -256,6 +270,7 @@ public class AnimationManager implements FraMCitRenderer.FrameProvider {
 
     public void close() {
         states.clear();
+        activeStates.clear();
         disabledMaps.clear();
     }
 }

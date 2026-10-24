@@ -14,8 +14,7 @@ Owner y unica autoridad de producto: el propietario del repositorio.
 
 ## 2. Plataforma objetivo (fija)
 
-- Servidor: **Paper 26.2** (verificado 2026-09-10 contra la API de PaperMC: canal
-  STABLE, build 123).
+- Servidor: **Paper 26.3** (actualizado 2026-10-23; Paper API canal STABLE, build 218).
 - Runtime: **Java 25** (requisito oficial de Paper 26.1+).
 - API: Paper API. No Spigot-only, no Bukkit legacy.
 - No se usa NMS ni reflexion contra clases internas del servidor. Si una funcionalidad
@@ -67,9 +66,10 @@ Una dependencia que impida arrancar es un fallo de diseno, no una funcionalidad.
    pide permiso, nunca *a quien* se le concede. Declara sus nodos y pregunta por ellos;
    quien reparte es el administrador con su gestor de permisos.
 
-   El comando viene **cerrado por defecto** (`framcit.imagen` con `default: op`): un
-   servidor recien instalado no deja que cualquiera haga que el servidor descargue de
-   internet. Abrirlo es una decision consciente del administrador, no el punto de partida.
+   El comando viene **cerrado para todos por defecto** (`framcit.imagen` con
+   `default: false`): ni siquiera los operadores reciben acceso implicitamente. El
+   administrador concede el nodo de forma explicita, también puede limitarlo por mundo
+   mediante contextos de LuckPerms. Abrirlo es una decision consciente, no el punto de partida.
 
    Lo que sigue sin existir, y no se anade sin aprobacion nueva: cooldown y lista blanca
    de dominios. Quien puede usar el comando se decide fuera del plugin; con que frecuencia

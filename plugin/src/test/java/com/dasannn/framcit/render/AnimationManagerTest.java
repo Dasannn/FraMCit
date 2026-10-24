@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -175,5 +176,71 @@ class AnimationManagerTest {
         assertFalse(manager.getState(player, 1).isGazing(), "Mapa anterior debe congelarse");
         // Mapa 2 debe quedar activo
         assertTrue(manager.getState(player, 2).isGazing());
+    }
+
+    @Test
+    @DisplayName("Indice de activos conserva estados congelados y restaura su frame al reanudar")
+    void testActiveIndexPreservesFrozenState() {
+        UUID player = UUID.randomUUID();
+        manager.updatePlayerGaze(player, 1, UUID.randomUUID(), "world", 0, 0);
+        PlayerMapState frozen = manager.getState(player, 1);
+        frozen.setFrameIndex(3);
+
+        manager.updatePlayerGaze(player, 2, UUID.randomUUID(), "world", 1, 1);
+
+        assertEquals(2, manager.getStateCount());
+        assertFalse(frozen.isGazing());
+        assertEquals(3, frozen.getFrameIndex());
+        assertEquals(List.of(manager.getState(player, 2)), List.copyOf(manager.getActiveStates()));
+
+        manager.updatePlayerGaze(player, 1, UUID.randomUUID(), "world", 0, 0);
+        assertTrue(frozen.isGazing());
+        assertEquals(3, frozen.getFrameIndex());
+        assertTrue(manager.getActiveStates().contains(frozen));
+    }
+
+    @Test
+    @DisplayName("Indice de activos devuelve un snapshot y queda consistente con todas las limpiezas")
+    void testActiveIndexSnapshotAndCleanupPaths() {
+        UUID player = UUID.randomUUID();
+        Collection<PlayerMapState> initialSnapshot = manager.getActiveStates();
+        manager.updatePlayerGaze(player, 1, UUID.randomUUID(), "world", 0, 0);
+        assertTrue(initialSnapshot.isEmpty(), "El snapshot no debe mutar con cambios posteriores");
+        assertEquals(1, manager.getActiveStates().size());
+
+        manager.clearPlayerGaze(player);
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertEquals(1, manager.getStateCount(), "Apartar la vista conserva el estado congelado");
+
+        manager.updatePlayerGaze(player, 2, UUID.randomUUID(), "world", 2, 3);
+        manager.onChunkUnload("world", 2, 3);
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertNull(manager.getState(player, 2));
+
+        UUID frame = UUID.randomUUID();
+        manager.updatePlayerGaze(player, 3, frame, "world", 0, 0);
+        manager.onFrameBreak(frame);
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertNull(manager.getState(player, 3));
+
+        manager.updatePlayerGaze(player, 4, UUID.randomUUID(), "world", 0, 0);
+        manager.disableMap(4, new RuntimeException("test"));
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertNull(manager.getState(player, 4));
+
+        manager.updatePlayerGaze(player, 5, UUID.randomUUID(), "world", 0, 0);
+        manager.removeMap(5);
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertNull(manager.getState(player, 5));
+
+        manager.updatePlayerGaze(player, 6, UUID.randomUUID(), "world", 0, 0);
+        manager.onPlayerQuit(player);
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertNull(manager.getState(player, 6));
+
+        manager.updatePlayerGaze(player, 7, UUID.randomUUID(), "world", 0, 0);
+        manager.close();
+        assertTrue(manager.getActiveStates().isEmpty());
+        assertEquals(0, manager.getStateCount());
     }
 }

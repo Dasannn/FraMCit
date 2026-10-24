@@ -3,6 +3,7 @@
 # =====================================================================
 # Todos los mensajes del plugin mostrados en chat a jugadores y administradores.
 # Soporta variables según el mensaje (por ejemplo: {code}, {frames}, {id}, {url}, etc.)
+# Los mensajes de lista y borrado admiten códigos de color con & (por ejemplo, &b, &e, &c).
 # Si alguna clave falta en este archivo, se usará automáticamente el mensaje
 # por defecto y se registrará una advertencia en la consola.
 # =====================================================================
@@ -32,10 +33,15 @@ imagen:
   archivo-danado: "Ese archivo esta danado y no se pudo leer."
   demasiados-frames: "Ese GIF tiene demasiados frames (limite: 100)."
   dimensiones-excesivas: "Esa imagen es demasiado grande (limite: 4096x4096)."
+  guardar-en-progreso: "Esa imagen ya se está guardando. Espera un momento antes de pedirla otra vez."
+
+almacenamiento:
+  error: "No se pudo completar la operación de almacenamiento. Avisa al staff antes de repetirla."
 
 exito:
   estatico: "Mapa creado correctamente (imagen estatica)."
   animado: "Imagen animada cargada ({frames} frames). Se muestra el primer frame como imagen fija."
+  entrega-recuperada: "Se recuperó una entrega pendiente de FraMCit."
 
 admin:
   recarga-exito: "Configuración y mensajes recargados. Aplicado al vuelo: límites de descarga, timeouts, redirecciones, dimensiones, frames, retardos, distancia de visión y tamaño de caché. NOTA: hilos de descarga, capacidad de cola y período de rastreo requieren REINICIAR el servidor."
@@ -68,3 +74,17 @@ cupos:
   borrada: "Imagen borrada. Te queda {usados} de {limite} en uso."
   no-existe: "No existe ninguna imagen con ese id."
   no-es-tuya: "Esa imagen no es tuya."
+  mias-encabezado: "&b✦ Mis imágenes &8— &7Página &f{pagina}&8/&f{total_paginas} &8| &7Cupo: &e{usados}&8/&e{limite}"
+  mias-item: "&e#{id} &8| &f{tipo} &8| &7{fecha} &8| &b{url}"
+  mias-pie: "&6Siguiente página: &f/imagen mias {pagina}"
+  mias-pagina-invalida: "&cPágina no válida. Elige una página entre 1 y {total_pages}."
+  borrar-detalles: "&7Detalles &8» &f{tipo} &8| &f{frames} frames &8| &7Fecha: &f{fecha} &8| &7Compartida: &f{compartida}\n&7URL: &b{url}"
+
+actualizacion:
+  comprobando: "&bComprobando actualizaciones de FraMCit..."
+  descargando: "&bComprobando la release y preparando la descarga si hay una actualización..."
+  actualizado: "&a✓ FraMCit ya está actualizado (&f{version}&a)."
+  local-mas-nueva: "&eTu versión local (&f{current}&e) es más nueva que la última release estable (&f{latest}&e); no se hará downgrade."
+  disponible: "&eNueva versión disponible: &f{version}&e. Ejecuta &f/img update&e para prepararla."
+  preparada: "&a✓ FraMCit {version} está preparado. Reinicia el servidor para aplicarlo."
+  error: "&cNo se pudo completar la actualización: {error}"

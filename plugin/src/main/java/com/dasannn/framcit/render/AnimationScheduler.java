@@ -14,8 +14,9 @@ import java.util.logging.Logger;
 /**
  * Planificador de animaciones de mapas (F6.6, F6.7, F6.9, F6.12, F12.5, F12.6, F12.9).
  *
- * Corre cada tick. Avanza ÚNICAMENTE los pares (jugador, mapa) cuyo retardo ya venció
- * y llama a player.sendMap(view) exclusivamente a ese jugador (ancho de banda proporcional).
+ * Corre cada tick. Recorre únicamente el índice de estados activos que entrega el manager,
+ * avanza los pares cuyo retardo ya venció y llama a player.sendMap(view) exclusivamente a
+ * ese jugador (ancho de banda y trabajo por tick proporcionales a los estados activos).
  * Bucle infinito ignorando repeticiones declaradas del GIF (F6.9).
  * Una excepción dentro del ciclo desactiva solo ese mapa, nunca el ciclo entero (F6.12).
  * Respeta la pausa por mirada prolongada (F12.5): si el par supera el umbral, congela el frame y omite el envío.
@@ -77,7 +78,7 @@ public class AnimationScheduler implements Runnable {
      * Ejecuta un tick del planificador a partir de una marca de tiempo dada (útil para pruebas unitarias).
      */
     public void tick(long currentTimeMs) {
-        for (PlayerMapState state : manager.getAllStates()) {
+        for (PlayerMapState state : manager.getActiveStates()) {
             if (!state.isGazing()) {
                 continue;
             }

@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -120,14 +121,35 @@ public class IndexManager {
      * Guarda el estado actual en index.json de forma atómica (F5.2, F5.11).
      */
     public synchronized void save() throws IOException {
+        saveJson(snapshotJson());
+    }
+
+    /**
+     * Crea una instantánea aislada del índice. Puede serializarse antes de encolar el I/O
+     * para evitar que cambios posteriores de owners muten el JSON que se está escribiendo.
+     */
+    public synchronized String snapshotJson() {
+        return snapshotJson(Set.of());
+    }
+
+    /** Snapshot that omits pending image entries which are not durable yet. */
+    public synchronized String snapshotJson(Set<Integer> excludedMapIds) {
+        List<ImageIndexEntry> snapshot = new ArrayList<>(entriesByMapId.size());
+        for (ImageIndexEntry entry : entriesByMapId.values()) {
+            if (excludedMapIds != null && excludedMapIds.contains(entry.getMapId())) {
+                continue;
+            }
+            snapshot.add(entry.snapshotCopy());
+        }
+        return gson.toJson(new IndexData(1, snapshot));
+    }
+
+    /** Guarda una instantánea JSON previamente serializada mediante reemplazo atómico. */
+    public synchronized void saveJson(String json) throws IOException {
         Path parent = indexPath.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
-
-        List<ImageIndexEntry> list = new ArrayList<>(entriesByMapId.values());
-        IndexData data = new IndexData(1, list);
-        String json = gson.toJson(data);
 
         String tmpName = "index.json." + UUID.randomUUID() + ".tmp";
         Path tempPath = (parent != null) ? parent.resolve(tmpName) : Path.of(tmpName);

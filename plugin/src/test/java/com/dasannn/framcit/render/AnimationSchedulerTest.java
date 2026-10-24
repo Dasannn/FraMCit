@@ -257,4 +257,70 @@ class AnimationSchedulerTest {
         assertEquals(1, manager.getState(p2Uuid, healthyMapId).getFrameIndex());
         assertEquals(1, playerSentMaps.get(p2Uuid).size());
     }
+
+    @Test
+    @DisplayName("El scheduler recorre activos, pero conserva y congela el frame de estados inactivos")
+    void testTickOnlyAdvancesActiveStates() {
+        UUID activePlayer = UUID.randomUUID();
+        UUID frozenPlayer = UUID.randomUUID();
+        Player active = createMockPlayer(activePlayer, "Active");
+        Player frozen = createMockPlayer(frozenPlayer, "Frozen");
+        onlinePlayers.put(activePlayer, active);
+        onlinePlayers.put(frozenPlayer, frozen);
+
+        entries.put(1, new ImageIndexEntry(1, "u1", "n1", "A", "a", "d", "GIF", 3, List.of(100, 100, 100), 1, false));
+        entries.put(2, new ImageIndexEntry(2, "u2", "n2", "A", "a", "d", "GIF", 3, List.of(100, 100, 100), 1, false));
+        mapViews.put(1, createMockMapView(1));
+        mapViews.put(2, createMockMapView(2));
+
+        AnimationScheduler scheduler = new AnimationScheduler(manager, mapViews::get, onlinePlayers::get, clock::get, null);
+        clock.set(1000L);
+        manager.updatePlayerGaze(frozenPlayer, 1, UUID.randomUUID(), "world", 0, 0);
+        manager.updatePlayerGaze(activePlayer, 2, UUID.randomUUID(), "world", 0, 0);
+        manager.clearPlayerGaze(frozenPlayer);
+
+        assertEquals(2, manager.getStateCount(), "El estado pausado sigue guardado para reanudarlo en el mismo frame");
+        assertEquals(1, manager.getActiveStates().size(), "Solo el par activo entra al scheduler");
+
+        for (int tick = 1; tick <= 10; tick++) {
+            clock.set(1000L + tick * 100L);
+            scheduler.tick(clock.get());
+        }
+
+        assertEquals(0, manager.getState(frozenPlayer, 1).getFrameIndex());
+        assertNull(playerSentMaps.get(frozenPlayer));
+        assertEquals(1, manager.getState(activePlayer, 2).getFrameIndex());
+        assertEquals(10, playerSentMaps.get(activePlayer).size());
+    }
+
+    @Test
+    @DisplayName("Los espectadores activos avanzan independientemente y clearPlayerGaze solo pausa a uno")
+    void testActiveViewersRemainIndependent() {
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        onlinePlayers.put(p1, createMockPlayer(p1, "P1"));
+        onlinePlayers.put(p2, createMockPlayer(p2, "P2"));
+        entries.put(1, new ImageIndexEntry(1, "u1", "n1", "A", "a", "d", "GIF", 3, List.of(100, 100, 100), 1, false));
+        entries.put(2, new ImageIndexEntry(2, "u2", "n2", "A", "a", "d", "GIF", 3, List.of(100, 100, 100), 1, false));
+        mapViews.put(1, createMockMapView(1));
+        mapViews.put(2, createMockMapView(2));
+
+        AnimationScheduler scheduler = new AnimationScheduler(manager, mapViews::get, onlinePlayers::get, clock::get, null);
+        clock.set(1000L);
+        manager.updatePlayerGaze(p1, 1, UUID.randomUUID(), "world", 0, 0);
+        manager.updatePlayerGaze(p2, 2, UUID.randomUUID(), "world", 0, 0);
+        assertEquals(2, manager.getActiveStates().size());
+
+        clock.set(1100L);
+        scheduler.tick(1100L);
+        assertEquals(1, manager.getState(p1, 1).getFrameIndex());
+        assertEquals(1, manager.getState(p2, 2).getFrameIndex());
+
+        manager.clearPlayerGaze(p1);
+        clock.set(1200L);
+        scheduler.tick(1200L);
+        assertEquals(1, manager.getState(p1, 1).getFrameIndex());
+        assertEquals(2, manager.getState(p2, 2).getFrameIndex());
+        assertEquals(1, manager.getActiveStates().size());
+    }
 }
