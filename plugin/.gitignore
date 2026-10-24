@@ -72,3 +72,7 @@ AGENTS.local.md
 
 # Daintree
 .daintree/*.local.json
+
+# La clave PUBLICA de actualizacion debe estar en el repo: el workflow
+# sign-release la descarga de main para verificarla contra la privada.
+!framcit-update-public-key.pem
