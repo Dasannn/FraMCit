@@ -14,7 +14,7 @@ no pertenece al repositorio ni al JAR.
    de release. El workflow solo firma releases publicadas estables y comprueba que la clave
    privada corresponde a la clave pública del código protegido.
 3. Publica una release con un asset llamado `FraMCit-MAJOR.MINOR.PATCH.jar`, por ejemplo
-   `FraMCit-1.1.0.jar`. El workflow añade `FraMCit-1.1.0.jar.sig` a la misma release.
+   `FraMCit-1.1.1.jar`. El workflow añade `FraMCit-1.1.1.jar.sig` a la misma release.
 
 El actualizador verifica el SHA-256 del asset publicado por GitHub, la firma Ed25519 y el
 `paper-plugin.yml` contenido en el JAR antes de prepararlo para el próximo reinicio. No requiere

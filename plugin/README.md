@@ -23,14 +23,14 @@ Ejecuta desde la carpeta `plugin/`:
 
 El archivo compilado se generará en:
 ```
-build/libs/FraMCit-1.1.0.jar
+build/libs/FraMCit-1.1.1.jar
 ```
 
 ## Como probar en el servidor Paper 26.3
 
-1. Copia el archivo generado `FraMCit-1.1.0.jar` a la carpeta `plugins/` de tu servidor local Paper 26.3:
+1. Copia el archivo generado `FraMCit-1.1.1.jar` a la carpeta `plugins/` de tu servidor local Paper 26.3:
    ```
-   <ruta-de-tu-servidor-paper>/plugins/FraMCit-1.1.0.jar
+   <ruta-de-tu-servidor-paper>/plugins/FraMCit-1.1.1.jar
    ```
 2. Inicia el servidor Paper 26.3.
 3. Verifica en la consola que aparezca el mensaje de activación sin advertencias ni errores:

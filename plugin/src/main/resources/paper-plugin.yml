@@ -1,5 +1,5 @@
 name: FraMCit
-version: '1.1.0'
+version: '1.1.1'
 main: com.dasannn.framcit.FraMCitPlugin
 api-version: '26.3'
 description: Imagenes y GIFs en marcos de Minecraft
