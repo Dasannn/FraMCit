@@ -67,6 +67,17 @@ public final class ImageCommand {
         ItemStack build(MapView mapView, URI uri, String rawUrl, Player player);
     }
 
+    @FunctionalInterface
+    interface MapViewLookup {
+        MapView get(int mapId);
+    }
+
+    @FunctionalInterface
+    interface CachedMapDelivery {
+        void deliver(FraMCitPlugin plugin, EconomyService economy, QuotaService quota, Player player,
+                     String rawUrl, ImageIndexEntry entry, MapView mapView, ImageStore imageStore);
+    }
+
     public static final int ITEMS_PER_PAGE = 5;
     private static final GithubUpdateService UPDATE_SERVICE = new GithubUpdateService();
     private static final AtomicBoolean UPDATE_IN_PROGRESS = new AtomicBoolean();
@@ -965,7 +976,14 @@ public final class ImageCommand {
     }
 
     static int handleObtener(CommandSender sender, int id, FraMCitPlugin plugin, ImageStore imageStore,
-                                      EconomyService fallbackEconomyService, QuotaService fallbackQuotaService) {
+                                       EconomyService fallbackEconomyService, QuotaService fallbackQuotaService) {
+        return handleObtener(sender, id, plugin, imageStore, fallbackEconomyService, fallbackQuotaService,
+            Bukkit::getMap, ImageCommand::deliverCachedMap);
+    }
+
+    static int handleObtener(CommandSender sender, int id, FraMCitPlugin plugin, ImageStore imageStore,
+                             EconomyService fallbackEconomyService, QuotaService fallbackQuotaService,
+                             MapViewLookup mapViewLookup, CachedMapDelivery cachedMapDelivery) {
         if (!sender.hasPermission("framcit.imagen")) {
             sender.sendMessage(Messages.component("&c" + Messages.NO_PERMISSION));
             return Command.SINGLE_SUCCESS;
@@ -983,7 +1001,7 @@ public final class ImageCommand {
             player.sendMessage(Messages.component("&c" + Messages.quotaIdNotOwned(id)));
             return Command.SINGLE_SUCCESS;
         }
-        MapView map = Bukkit.getMap(id);
+        MapView map = mapViewLookup.get(id);
         if (map == null || entry.isOrphan()) {
             player.sendMessage(Messages.component("&c" + Messages.quotaIdNotFound(id)));
             return Command.SINGLE_SUCCESS;
@@ -995,8 +1013,8 @@ public final class ImageCommand {
             player.sendMessage(Messages.component("&c" + Messages.insufficientFunds(inf.formattedPrice(), inf.formattedBalance())));
             return Command.SINGLE_SUCCESS;
         }
-        deliverCachedMap(plugin, economy, resolveQuotaService(plugin, imageStore, fallbackQuotaService), player,
-            entry.getOriginalUrl(), entry, map, imageStore);
+        cachedMapDelivery.deliver(plugin, economy, resolveQuotaService(plugin, imageStore, fallbackQuotaService),
+            player, entry.getOriginalUrl(), entry, map, imageStore);
         return Command.SINGLE_SUCCESS;
     }
 

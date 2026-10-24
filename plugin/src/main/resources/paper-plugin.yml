@@ -17,6 +17,8 @@ permissions:
   framcit.admin:
     description: Permisos de administracion de FraMCit
     default: false
+    children:
+      framcit.imagen: true
   framcit.gratis:
     description: Permite crear imagenes sin pagar
     default: false

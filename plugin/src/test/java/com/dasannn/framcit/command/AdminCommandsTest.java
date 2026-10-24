@@ -18,9 +18,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -88,7 +92,7 @@ class AdminCommandsTest {
                 String name = method.getName();
                 if ("hasPermission".equals(name)) {
                     String perm = (String) args[0];
-                    return "framcit.admin".equals(perm) ? hasAdmin : false;
+                    return hasAdmin && ("framcit.admin".equals(perm) || "framcit.imagen".equals(perm));
                 }
                 if ("getName".equals(name)) {
                     return "AdminPlayer";
@@ -129,6 +133,36 @@ class AdminCommandsTest {
         assertEquals(1, messagesAdmin.size());
         assertTrue(messagesAdmin.getFirst().contains("recargados"));
         assertTrue(messagesAdmin.getFirst().contains("REINICIAR") || messagesAdmin.getFirst().contains("reiniciar"));
+    }
+
+    @Test
+    @DisplayName("framcit.admin hereda framcit.imagen, pero no permisos gratis ni de cupo ilimitado")
+    void testAdminPermissionOnlyImpliesImagePermission() throws IOException {
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("paper-plugin.yml")) {
+            assertNotNull(input, "paper-plugin.yml debe estar en los recursos de pruebas");
+            Map<?, ?> descriptor = new org.yaml.snakeyaml.Yaml().load(new InputStreamReader(input, StandardCharsets.UTF_8));
+            Map<?, ?> permissions = (Map<?, ?>) descriptor.get("permissions");
+            Map<?, ?> admin = (Map<?, ?>) permissions.get("framcit.admin");
+            Map<?, ?> children = (Map<?, ?>) admin.get("children");
+
+            assertEquals(Boolean.TRUE, children.get("framcit.imagen"));
+            assertFalse(children.containsKey("framcit.gratis"));
+            assertFalse(children.containsKey("framcit.slots.ilimitado"));
+        }
+    }
+
+    @Test
+    @DisplayName("Un jugador con solo framcit.admin puede ejecutar /imagen; sin ambos permisos se rechaza")
+    void testBaseImageCommandPermissionInheritance() {
+        List<String> adminMessages = new ArrayList<>();
+        Player adminOnly = createMockPlayer(true, adminMessages);
+        ImageCommand.handleImage(adminOnly, "", null, null, null, null, null);
+        assertEquals(List.of(Messages.USAGE), adminMessages);
+
+        List<String> deniedMessages = new ArrayList<>();
+        Player noPermission = createMockPlayer(false, deniedMessages);
+        ImageCommand.handleImage(noPermission, "", null, null, null, null, null);
+        assertEquals(List.of(Messages.NO_PERMISSION), deniedMessages);
     }
 
     @Test

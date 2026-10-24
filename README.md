@@ -97,7 +97,7 @@ manager's job, never the plugin's.**
 | Node | Default | Grants |
 |---|---|---|
 | `framcit.imagen` | `false` | Use `/imagen`, `mias`, `obtener`, `borrar` |
-| `framcit.admin` | `false` | All admin subcommands |
+| `framcit.admin` | `false` | All admin subcommands; also implies `framcit.imagen` |
 | `framcit.gratis` | `false` | Exempt from payment; price is never even mentioned |
 | `framcit.slots.1` | `false` | Own up to 1 image at a time |
 | `framcit.slots.2` | `false` | Up to 2 images |

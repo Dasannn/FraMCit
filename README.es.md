@@ -100,7 +100,7 @@ gestor de permisos, nunca del plugin.**
 | Nodo | Por defecto | Da |
 |---|---|---|
 | `framcit.imagen` | `false` | Usar `/imagen`, `mias`, `obtener`, `borrar` |
-| `framcit.admin` | `false` | Todos los subcomandos de administración |
+| `framcit.admin` | `false` | Todos los subcomandos de administración; también implica `framcit.imagen` |
 | `framcit.gratis` | `false` | Exento de pago; ni se le menciona el precio |
 | `framcit.slots.1` | `false` | Poseer hasta 1 imagen a la vez |
 | `framcit.slots.2` | `false` | Hasta 2 imágenes |

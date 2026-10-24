@@ -78,7 +78,9 @@ class ImageCommandQuotaTest {
                 if ("isOnline".equals(mName)) return true;
                 if ("isOp".equals(mName)) return permissions.contains("op");
                 if ("hasPermission".equals(mName) && args != null && args.length > 0) {
-                    return permissions.contains((String) args[0]);
+                    String permission = (String) args[0];
+                    return permissions.contains(permission)
+                        || ("framcit.imagen".equals(permission) && permissions.contains("framcit.admin"));
                 }
                 if ("sendMessage".equals(mName) && args != null && args.length > 0) {
                     if (args[0] instanceof Component comp) {
@@ -404,7 +406,7 @@ class ImageCommandQuotaTest {
     void testObtenerRejectsNonOwner() {
         UUID owner = UUID.randomUUID();
         List<String> messages = new ArrayList<>();
-        Player player = createMockPlayer(UUID.randomUUID(), "Visitor", Set.of("framcit.imagen"), messages);
+        Player player = createMockPlayer(UUID.randomUUID(), "Visitor", Set.of("framcit.admin"), messages);
         imageStore.getIndexManager().addEntry(new ImageIndexEntry(77, "https://example.com/77.png",
             "https://example.com/77.png", "Owner", owner.toString(), "2026-10-23", "PNG", 1,
             List.of(0), 1, false, new ArrayList<>(List.of(owner.toString()))));
@@ -412,6 +414,97 @@ class ImageCommandQuotaTest {
         // El rechazo por propiedad ocurre antes de consultar Bukkit para el MapView.
         assertEquals(1, ImageCommand.handleObtener(player, 77, null, imageStore, null, null));
         assertEquals(Messages.quotaIdNotOwned(77), messages.getFirst());
+    }
+
+    @Test
+    @DisplayName("/imagen obtener con solo framcit.admin entrega el mapa propio no huérfano y conserva el chequeo de economía")
+    void testAdminOnlyCanObtenerOwnedNonOrphanMap() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "AdminOwner", Set.of("framcit.admin"), messages);
+        ImageIndexEntry entry = new ImageIndexEntry(781, "https://example.com/owned.png",
+            "https://example.com/owned.png", "AdminOwner", owner.toString(), "2026-10-23", "PNG", 1,
+            List.of(0), 1, false, List.of(owner.toString()));
+        imageStore.getIndexManager().addEntry(entry);
+
+        MockEconomyService economy = new MockEconomyService();
+        MapView mapView = createMockMapView(781);
+        AtomicInteger deliveries = new AtomicInteger();
+        int result = ImageCommand.handleObtener(player, 781, null, imageStore, economy, null,
+            mapId -> mapId == 781 ? mapView : null,
+            (plugin, usedEconomy, quota, recipient, rawUrl, cached, resolvedMap, store) -> {
+                assertSame(player, recipient);
+                assertSame(entry, cached);
+                assertSame(mapView, resolvedMap);
+                assertSame(imageStore, store);
+                deliveries.incrementAndGet();
+            });
+
+        assertEquals(1, result);
+        assertEquals(1, economy.checkCalls.get(), "Obtener debe conservar el chequeo de saldo");
+        assertEquals(1, deliveries.get(), "El mapa propio, existente y no huérfano debe llegar a la entrega");
+        assertTrue(messages.isEmpty());
+    }
+
+    @Test
+    @DisplayName("/imagen obtener sin framcit.imagen ni framcit.admin rechaza antes de buscar el mapa")
+    void testObtenerWithoutPermissionsRejectsBeforeLookup() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "NoPermission", Set.of(), messages);
+        AtomicInteger lookups = new AtomicInteger();
+        MockEconomyService economy = new MockEconomyService();
+
+        ImageCommand.handleObtener(player, 782, null, imageStore, economy, null,
+            id -> {
+                lookups.incrementAndGet();
+                return createMockMapView(id);
+            },
+            (plugin, usedEconomy, quota, recipient, rawUrl, cached, mapView, store) -> fail("No debe entregar"));
+
+        assertEquals(List.of(Messages.NO_PERMISSION), messages);
+        assertEquals(0, lookups.get());
+        assertEquals(0, economy.checkCalls.get());
+    }
+
+    @Test
+    @DisplayName("/imagen obtener rechaza un id inexistente antes de consultar economía")
+    void testObtenerRejectsMissingId() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "Owner", Set.of("framcit.imagen"), messages);
+        MockEconomyService economy = new MockEconomyService();
+        AtomicInteger deliveries = new AtomicInteger();
+
+        ImageCommand.handleObtener(player, 783, null, imageStore, economy, null,
+            ImageCommandQuotaTest::createMockMapView,
+            (plugin, usedEconomy, quota, recipient, rawUrl, cached, mapView, store) -> deliveries.incrementAndGet());
+
+        assertEquals(List.of(Messages.quotaIdNotFound(783)), messages);
+        assertEquals(0, economy.checkCalls.get());
+        assertEquals(0, deliveries.get());
+    }
+
+    @Test
+    @DisplayName("/imagen obtener rechaza mapas huérfanos sin consultar economía ni entregar")
+    void testObtenerRejectsOrphanMap() {
+        UUID owner = UUID.randomUUID();
+        List<String> messages = new ArrayList<>();
+        Player player = createMockPlayer(owner, "Owner", Set.of("framcit.imagen"), messages);
+        ImageIndexEntry orphan = new ImageIndexEntry(784, "https://example.com/orphan.png",
+            "https://example.com/orphan.png", "Owner", owner.toString(), "2026-10-23", "PNG", 1,
+            List.of(0), 1, true, List.of(owner.toString()));
+        imageStore.getIndexManager().addEntry(orphan);
+        MockEconomyService economy = new MockEconomyService();
+        AtomicInteger deliveries = new AtomicInteger();
+
+        ImageCommand.handleObtener(player, 784, null, imageStore, economy, null,
+            ImageCommandQuotaTest::createMockMapView,
+            (plugin, usedEconomy, quota, recipient, rawUrl, cached, mapView, store) -> deliveries.incrementAndGet());
+
+        assertEquals(List.of(Messages.quotaIdNotFound(784)), messages);
+        assertEquals(0, economy.checkCalls.get());
+        assertEquals(0, deliveries.get());
     }
 
     @Test
